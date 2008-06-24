@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.1 2008/06/24 08:16:44 oxon Exp $
+// $Id: THealPix.cxx,v 1.2 2008/06/24 16:54:40 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -102,8 +102,26 @@ Bool_t THealPix::AddDirectoryStatus()
 }
 
 //_____________________________________________________________________________
-Int_t THealPix::AngToPix(Double_t theta, Double_t phi) const
+Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
 {
+  // Oribinal code is Healpix_Base::ang2pix_z_phi of HEALPix C++
+  if(fIsDegree){
+    theta *= TMath::DegToRad();
+    phi   *= TMath::DegToRad();
+  } // if
+
+  // Theta must be in range [0, pi] # NOT [0, pi)
+  while(theta < 0)               theta += TMath::TwoPi();
+  while(theta >= TMath::TwoPi()) theta -= TMath::TwoPi();
+  if(theta > TMath::Pi()){
+    theta -= TMath::Pi();
+    phi   += TMath::Pi();
+  } // if
+
+  // Phi must be in range [0, 2pi)
+  while(phi   < 0)               phi   += TMath::TwoPi();
+  while(phi   >= TMath::TwoPi()) phi   -= TMath::TwoPi();
+
   Double_t z = TMath::Cos(theta);
   Double_t zabs = TMath::Abs(z);
   Double_t z0 = 2./3.;
@@ -227,12 +245,7 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi)
   } // if
   */
 
-  if(fIsDegree){
-    theta *= TMath::DegToRad();
-    phi   *= TMath::DegToRad();
-  } // if
-
-  Int_t bin = AngToPix(theta, phi);
+  Int_t bin = FindBin(theta, phi);
   AddBinContent(bin);
 
   return bin;
@@ -246,12 +259,8 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
     return BufferFill(x, y, w);
   } // if
   */
-  if(fIsDegree){
-    theta *= TMath::DegToRad();
-    phi   *= TMath::DegToRad();
-  } // if
 
-  Int_t bin = AngToPix(theta, phi);
+  Int_t bin = FindBin(theta, phi);
   AddBinContent(bin, w);
 
   return bin;
@@ -409,7 +418,8 @@ Int_t THealPix::GetNrows() const
   return fOrder < 4 ? 1 : 1024;
 }
 
-std::string THealPix::GetOrderingTypeString() const
+//_____________________________________________________________________________
+std::string THealPix::GetSchemeString() const
 {
   if(fIsNested){
     return "NESTED";
@@ -431,6 +441,7 @@ std::string THealPix::GetTypeString() const
 //_____________________________________________________________________________
 Int_t THealPix::XYToPix(Int_t x, Int_t y) const
 {
+  // Original code is Healpix_Base::xy2pix of HEALPix C++
   return fgTable.U(x&0xff) | (fgTable.U(x>>8)<<16) | (fgTable.U(y&0xff)<<1)
     | (fgTable.U(y>>8)<<17);
 }

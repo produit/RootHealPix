@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.1 2008/06/24 08:16:44 oxon Exp $
+// $Id: THealUtil.cxx,v 1.2 2008/06/24 16:54:40 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -259,7 +259,7 @@ Bool_t SaveToFits(const char* fname, const std::vector<THealPix*>& hp)
   } // if
 
   fits_write_key(fptr, TSTRING, (char*)"PIXTYPE", (char*)"HEALPIX", (char*)"HEALPIX pixelisation", &status);
-  fits_write_key(fptr, TSTRING, (char*)"ORDERING", (char*)hp[0]->GetOrderingTypeString().c_str(), (char*)"Pixel ordering scheme, either RING or NESTED", &status);
+  fits_write_key(fptr, TSTRING, (char*)"ORDERING", (char*)hp[0]->GetSchemeString().c_str(), (char*)"Pixel ordering scheme, either RING or NESTED", &status);
   Long_t nside = hp[0]->GetNside();
   fits_write_key(fptr, TINT, (char*)"NSIDE", &nside, (char*)"Resolution parameter for HEALPIX", &status);
   Long_t first = 0;

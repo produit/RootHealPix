@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.1 2008/06/24 08:16:43 oxon Exp $
+// $Id: THealPix.h,v 1.2 2008/06/24 16:54:39 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -71,16 +71,16 @@ public:
   virtual void     AddBinContent(Int_t bin, Double_t w);
   static  void     AddDirectory(Bool_t add = kTRUE);
   static  Bool_t   AddDirectoryStatus();
-  virtual Int_t    AngToPix(Double_t theta, Double_t phi) const;
   virtual void     Draw(Option_t* option = "");
   virtual Int_t    Fill(Double_t theta, Double_t phi);
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
+  virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
   virtual Int_t    GetNside() const { return fNside;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
   virtual Int_t    GetOrder() const { return fOrder;}
-  virtual std::string GetOrderingTypeString() const;
+  virtual std::string GetSchemeString() const;
   virtual Int_t    GetType() const { return fType;}
   virtual std::string GetTypeString() const;
   virtual std::string GetUnit() const { return fUnit;}
