@@ -1,4 +1,4 @@
-// $Id: THealUtil.h,v 1.1 2008/06/24 08:16:43 oxon Exp $
+// $Id: THealUtil.h,v 1.2 2008/06/24 23:59:14 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -13,12 +13,14 @@
 #include <cmath>
 
 #include "Rtypes.h"
+#include "TMath.h"
 
 namespace THealUtil {
-  inline Int_t NsideToNpix(Int_t nside) { return 12*nside*nside;}
-  inline Int_t OrderToNside(Int_t order) { return 1<<order;}
+  inline Int_t Nside2Npix(Int_t nside) { return 12*nside*nside;}
+  inline Int_t Order2Nside(Int_t order) { return 1<<order;}
 
   Bool_t       FitsReportError(Int_t status);
+  inline UInt_t   Isqrt(UInt_t v);
   inline Double_t Modulo(Double_t v1, Double_t v2);
   inline Int_t    Modulo(Int_t v1, Int_t v2);
   inline Long_t   Modulo(Long_t v1, Long_t v2);
@@ -26,20 +28,30 @@ namespace THealUtil {
 };
 
 //_____________________________________________________________________________
+UInt_t THealUtil::Isqrt(UInt_t v)
+{
+  // Original code is isqrt of HEALPix C++
+  return UInt_t(TMath::Sqrt(v + .5));
+}
+
+//_____________________________________________________________________________
 Double_t THealUtil::Modulo(Double_t v1, Double_t v2)
 {
+  // Original code is modulo of HEALPix C++
   return (v1 >= 0) ? ((v1 < v2) ? v1 : fmod(v1, v2)) : (fmod(v1, v2) + v2);
 }
 
 //_____________________________________________________________________________
 Int_t THealUtil::Modulo(Int_t v1, Int_t v2)
 {
+  // Original code is modulo of HEALPix C++
   return (v1 >= 0) ? ((v1 < v2) ? v1 : (v1%v2)) : ((v1%v2) + v2);
 }
 
 //_____________________________________________________________________________
 Long_t THealUtil::Modulo(Long_t v1, Long_t v2)
 {
+  // Original code is modulo of HEALPix C++
   return (v1 >= 0) ? ((v1 < v2) ? v1 : (v1%v2)) : ((v1%v2) + v2);
 }
 
