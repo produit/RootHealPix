@@ -1,0 +1,11 @@
+$Id: README,v 1.1 2008/06/24 08:16:42 oxon Exp $
+Author: Akira Okumura 2008/06/23
+
+=== RootHealPix Library ===
+
+=== Acknowledgement ===
+RootHealPix classes are based on
+- ROOT
+  <http://root.cern.ch/>
+- HEALPix C++
+  <http://healpix.jpl.nasa.gov/healpixSoftwareCapabilities.shtml>
