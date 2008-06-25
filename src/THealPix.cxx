@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.2 2008/06/24 16:54:40 oxon Exp $
+// $Id: THealPix.cxx,v 1.3 2008/06/25 04:28:06 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -22,6 +22,8 @@
 
 Bool_t THealPix::fgAddDirectory = kTRUE;
 THealPix::THealTable THealPix::fgTable = THealPix::THealTable();
+const Int_t THealPix::fgJrll[] = {2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4};
+const Int_t THealPix::fgJpll[] = {1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7};
 
 THealPix::THealTable::THealTable()
 {
@@ -38,13 +40,11 @@ ClassImp(THealPix)
 //_____________________________________________________________________________
 THealPix::THealPix()
 : TNamed(),
-  fOrder(0),
-  fNside(1),
-  fNpix(12),
   fIsNested(kFALSE),
   fUnit(""),
   fDirectory(0)
 {
+  SetOrder(0);
 }
 
 //_____________________________________________________________________________
@@ -66,9 +66,11 @@ THealPix::THealPix(const char* name, const char* title, Int_t order,
   : TNamed(name, title), fIsNested(isNested), fUnit("")
 {
   Build();
-  fOrder = order < 0 ? 0 : order;
-  fNside = THealUtil::OrderToNside(fOrder);
-  fNpix  = THealUtil::NsideToNpix(fNside);
+
+  if(order < 0)  order = 0;
+  if(order > 13) order = 13;
+
+  SetOrder(order);
 }
 
 //_____________________________________________________________________________
@@ -207,7 +209,7 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
       } // if
     } // if
     
-    Int_t ipf = XYToPix(ix, iy);
+    Int_t ipf = XY2Pix(ix, iy);
     
     ipf >>= (2*(order_max - fOrder));  // in {0, fNside**2 - 1}
     
@@ -231,9 +233,38 @@ void THealPix::Build()
 }
 
 //_____________________________________________________________________________
-void THealPix::Copy(TObject& newhp) const
+void THealPix::Copy(TObject& obj) const
 {
-  THealPix::Copy(newhp);
+  if(((THealPix&)obj).fDirectory){
+    // We are likely to change the hash value of this object
+    // with TNamed::Copy, to keep things correct, we need to
+    // clean up its existing entries.
+    ((THealPix&)obj).fDirectory->Remove(&obj);
+    ((THealPix&)obj).fDirectory = 0;
+  } // if
+  TNamed::Copy(obj);
+  ((THealPix&)obj).fOrder    = fOrder;
+  ((THealPix&)obj).fNside    = fNside;
+  ((THealPix&)obj).fNpix     = fNpix;
+  ((THealPix&)obj).fNpFace   = fNpFace;
+  ((THealPix&)obj).fNcap     = fNcap;
+  ((THealPix&)obj).fIsDegree = fIsDegree;
+  ((THealPix&)obj).fIsNested = fIsNested;
+  ((THealPix&)obj).fType     = fType;
+  ((THealPix&)obj).fUnit     = fUnit;
+
+  TArray* a = dynamic_cast<TArray*>(&obj);
+  if(a){
+    a->Set(fNpix);
+  } // if
+  for(Int_t i = 0; i < fNpix; i++){
+    ((THealPix&)obj).SetBinContent(i, this->GetBinContent(i));
+  } // i
+
+  if(fgAddDirectory && gDirectory){
+    gDirectory->Append(&obj);
+    ((THealPix&)obj).fDirectory = gDirectory;
+  } // if
 }
 
 //______________________________________________________________________________
@@ -388,7 +419,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
     } // if
   } // i
 
-  Int_t npix = THealUtil::NsideToNpix(nside);
+  Int_t npix = THealUtil::Nside2Npix(nside);
 
   if(npix%nrows != 0){
     fits_close_file(*fptr, &status);
@@ -404,6 +435,93 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
   head.colnum   = colnum;
   
   return kTRUE;
+}
+
+//_____________________________________________________________________________
+THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
+{
+  // Rebin this HEALPix
+  // -case 1 ngroup>0
+  // -case 2 ngroup<0
+  if(neworder > 13 || neworder < 0){
+    Error("Rebin", "Illegal value of neworder=%d",neworder);
+    return 0;
+  } // if
+
+  THealPix* hpnew = this;
+  if(newname && strlen(newname) > 0){
+    hpnew = (THealPix*)Clone(newname);
+  } // if
+  if(neworder == fOrder){
+    return hpnew;
+  } // if
+
+  Double_t* oldBins = new Double_t[fNpix];
+  for(Int_t i = 0; i < fNpix; i++){
+    oldBins[i] = GetBinContent(i);
+  } // i
+
+  hpnew->SetOrder(neworder);
+  hpnew->SetBinsLength(hpnew->GetNpix());
+
+  Int_t newnpix  = hpnew->GetNpix();
+  if(IsNested()){ // NESTED
+    if(neworder < fOrder){ // rebin to lower level
+      Int_t div = fNpix/newnpix;
+      for(Int_t i = 0; i < newnpix; i++){
+	Double_t content = 0;
+	for(Int_t j = i*div; j < (i + 1)*div; j++){
+	  content += oldBins[j];
+	} // j
+	hpnew->SetBinContent(i, content);
+      } // i
+    } else { // rebin to higher level
+      Int_t div = newnpix/fNpix;
+      for(Int_t i = 0; i < newnpix; i++){
+	hpnew->SetBinContent(i, oldBins[i/div]/div);
+      } // i
+    } // if
+  } else { // RING
+    if(neworder < fOrder){ // rebin to lower level
+      Int_t div = fNpix/newnpix;
+      for(Int_t i = 0; i < newnpix; i++){
+	Double_t content = 0;
+	Int_t inest = hpnew->Ring2Nest(i);
+	for(Int_t jnest = inest*div; jnest < (inest + 1)*div; jnest++){
+	  Int_t j = Nest2Ring(jnest);
+	  content += oldBins[j];
+	} // j
+	hpnew->SetBinContent(i, content);
+      } // i
+    } else { // rebin to higher level
+      Int_t div = newnpix/fNpix;
+      for(Int_t i = 0; i < newnpix; i++){
+	Int_t inest = hpnew->Ring2Nest(i);
+	hpnew->SetBinContent(i, oldBins[Nest2Ring(inest/div)]/div);
+      } // i
+    } // if
+  } // if
+
+  return hpnew;
+}
+
+//_____________________________________________________________________________
+void THealPix::SetBinContent(Int_t, Double_t)
+{
+  AbstractMethod("SetBinContent");
+}
+
+//_____________________________________________________________________________
+void THealPix::SetOrder(Int_t order)
+{
+  if(order < 0)  order = 0;
+  if(order > 13) order = 13;
+
+  fOrder = order;
+  fNside = THealUtil::Order2Nside(fOrder);
+  fNpix  = THealUtil::Nside2Npix(fNside);
+  fNpFace= fNside*fNside;
+  fNcap  = 2*(fNpFace - fNside);
 }
 
 //_____________________________________________________________________________
@@ -439,7 +557,162 @@ std::string THealPix::GetTypeString() const
 }
 
 //_____________________________________________________________________________
-Int_t THealPix::XYToPix(Int_t x, Int_t y) const
+void THealPix::Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
+{
+  // Original code is Healpix_Base::nest2xyf of HEALPix C++
+  face = pix>>(2*fOrder);
+  Pix2XY(pix & (fNpFace - 1), x, y);
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::XYF2Nest(Int_t x, Int_t y, Int_t face) const
+{
+  // Original code is Healpix_Base::xyf2nest of HEALPix C++
+  return (face<<(2*fOrder)) + XY2Pix(x, y);
+}
+
+//_____________________________________________________________________________
+void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
+{
+  // Original code is Healpix_Base::ring2xyf of HEALPix C++
+  Int_t iring, iphi, kshift, nr;
+  
+  Int_t nl2 = 2*fNside;
+  
+  if(pix < fNcap){ // North Polar cap
+    iring = Int_t(0.5*(1 + THealUtil::Isqrt(1 + 2*pix))); //counted from North pole
+    iphi  = (pix + 1) - 2*iring*(iring - 1);
+    kshift = 0;
+    nr = iring;
+    face = 0;
+    Int_t tmp = iphi - 1;
+    if(tmp >= 2*iring){
+      face = 2;
+      tmp -= 2*iring;
+    } // if
+    if(tmp >= iring){
+      face++;
+    } // if
+  } else if(pix < fNpix - fNcap){ // Equatorial region
+    Int_t ip = pix - fNcap;
+    if(fOrder >= 0){
+      iring = (ip>>(fOrder + 2)) + fNside; // counted from North pole
+      iphi  = (ip&(4*fNside - 1)) + 1;
+    } else {
+      iring = (ip/(4*fNside)) + fNside; // counted from North pole
+      iphi = (ip%(4*fNside)) + 1;
+    } // if
+    kshift = (iring + fNside)&1;
+    nr = fNside;
+    UInt_t ire = iring - fNside + 1;
+    UInt_t irm = nl2 + 2 - ire;
+    Int_t ifm, ifp;
+    if(fOrder >= 0){
+      ifm = (iphi - ire/2 + fNside -1) >> fOrder;
+      ifp = (iphi - irm/2 + fNside -1) >> fOrder;
+    } else {
+      ifm = (iphi - ire/2 + fNside -1) / fNside;
+      ifp = (iphi - irm/2 + fNside -1) / fNside;
+    } // if
+    if(ifp == ifm){ // faces 4 to 7
+      face = (ifp==4) ? 4 : ifp+4;
+    } else if(ifp<ifm){ // (half-)faces 0 to 3
+      face = ifp;
+    } else { // (half-)faces 8 to 11
+      face = ifm + 8;
+    } // if
+  } else { // South Polar cap
+    Int_t ip = fNpix - pix;
+    iring = Int_t(0.5*(1 + THealUtil::Isqrt(2*ip - 1))); //counted from South pole
+    iphi  = 4*iring + 1 - (ip - 2*iring*(iring - 1));
+    kshift = 0;
+    nr = iring;
+    iring = 2*nl2 - iring;
+    face = 8;
+    Int_t tmp = iphi - 1;
+    if(tmp >= 2*nr){
+      face = 10;
+      tmp -= 2*nr;
+    } // if
+    if(tmp >= nr){
+      ++face;
+    } // if
+  } // if
+
+  Int_t irt = iring - (fgJrll[face]*fNside) + 1;
+  Int_t ipt = 2*iphi- fgJpll[face]*nr - kshift -1;
+  if(ipt >= nl2){
+    ipt -= 8*fNside;
+  } // if
+
+  x =  (ipt-irt) >>1;
+  y =(-(ipt+irt))>>1;
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::XYF2Ring(Int_t x, Int_t y, Int_t face) const
+{
+  // Original code is Healpix_Base::xyf2ring of HEALPix C++
+  Int_t nl4 = 4*fNside;
+  Int_t jr = (fgJrll[face]*fNside) - x - y  - 1;
+
+  Int_t nr, kshift, n_before;
+  if(jr < fNside){
+    nr = jr;
+    n_before = 2*nr*(nr - 1);
+    kshift = 0;
+  } else if (jr > 3*fNside){
+    nr = nl4 - jr;
+    n_before = fNpix - 2*(nr + 1)*nr;
+    kshift = 0;
+  } else {
+    nr = fNside;
+    n_before = fNcap + (jr - fNside)*nl4;
+    kshift = (jr - fNside)&1;
+  } // if
+
+  Int_t jp = (fgJpll[face]*nr + x - y + 1 + kshift)/2;
+  if(jp > nl4){
+    jp -= nl4;
+  } else {
+    if(jp < 1){
+      jp += nl4;
+    } // if
+  } // if
+
+  return n_before + jp - 1;
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::Nest2Ring(Int_t pix) const
+{
+  // Original code is Healpix_Base::nest2ring of HEALPix C++
+  Int_t x, y, face;
+  Nest2XYF(pix, x, y, face);
+  return XYF2Ring(x, y, face);
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::Ring2Nest(Int_t pix) const
+{
+  // Original code is Healpix_Base::ring2nest of HEALPix C++
+  Int_t x, y, face;
+  Ring2XYF(pix, x, y, face);
+  return XYF2Nest(x, y, face);
+}
+
+//_____________________________________________________________________________
+void THealPix::Pix2XY(Int_t pix, Int_t& x, Int_t& y) const
+{
+  // Original code is Healpix_Base::pix2xy of HEALPix C++
+  Int_t raw = (pix&0x5555) | ((pix&0x55550000)>>15);
+  x = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
+  raw = ((pix&0xaaaa)>>1) | ((pix&0xaaaa0000)>>16);
+  y = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::XY2Pix(Int_t x, Int_t y) const
 {
   // Original code is Healpix_Base::xy2pix of HEALPix C++
   return fgTable.U(x&0xff) | (fgTable.U(x>>8)<<16) | (fgTable.U(y&0xff)<<1)
@@ -488,7 +761,8 @@ Double_t THealPixD::GetBinContent(Int_t bin) const
     return 0;
   } // if
 
-  bin = (bin < 0 ? 0 : bin) < fNpix ? bin : fNpix - 1;
+  bin = bin < 0 ? 0 : bin;
+  bin = bin < fNpix ? bin : fNpix - 1;
 
   return Double_t(fArray[bin]);
 }
@@ -520,3 +794,24 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
 
   return hpd;
 }
+
+//_____________________________________________________________________________
+void THealPixD::SetBinContent(Int_t bin, Double_t content)
+{
+  if(bin < 0 || fNpix <= 0){
+    return;
+  } // if
+  fArray[bin] = content;
+}
+
+//_____________________________________________________________________________
+void THealPixD::SetBinsLength(Int_t n)
+{
+  // Set total number of bins
+  // Reallocate bin contents array
+  if(n < 0){
+    n = fNpix;
+  } // if
+  TArrayD::Set(n);
+}
+

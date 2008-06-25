@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.2 2008/06/24 16:54:39 oxon Exp $
+// $Id: THealPix.h,v 1.3 2008/06/25 04:28:05 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -41,6 +41,8 @@ protected:
   Int_t         fOrder; //
   Int_t         fNside; // = 2^fOrder
   Int_t         fNpix;  // = 12*fNside^2
+  Int_t         fNpFace;// = fNside*fNside (used for faster calculation)
+  Int_t         fNcap;  // = fNpFace*fNside (used for faster calculation)
   Bool_t        fIsDegree; // deg = true, rad = false
   Bool_t        fIsNested; // RING = false, NESTED = true
   Int_t         fType; // Data type : TDOUBLE, TFLOAT, TINT
@@ -48,6 +50,8 @@ protected:
   TDirectory*   fDirectory; //!Pointer to directory holding this HEALPixxs
   static Bool_t fgAddDirectory; //!flag to add HEALPixs to the directory
   static THealTable fgTable;
+  static const Int_t fgJrll[];
+  static const Int_t fgJpll[];
 
 private:
   void Build();
@@ -86,9 +90,21 @@ public:
   virtual std::string GetUnit() const { return fUnit;}
   virtual Bool_t   IsNested() const {return fIsNested;}
   virtual void     Paint(Option_t *option="");
+  virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
+  virtual void     SetBinContent(Int_t bin, Double_t content);
+  virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
+  virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
   virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
-  virtual Int_t    XYToPix(Int_t x, Int_t y) const;
+
+  virtual void     Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
+  virtual Int_t    XYF2Nest(Int_t x, Int_t y, Int_t face) const;
+  virtual void     Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
+  virtual Int_t    XYF2Ring(Int_t x, Int_t y, Int_t face) const;
+  virtual Int_t    Nest2Ring(Int_t pix) const;
+  virtual Int_t    Ring2Nest(Int_t pix) const;
+  virtual void     Pix2XY(Int_t pix, Int_t& x, Int_t& y) const;
+  virtual Int_t    XY2Pix(Int_t x, Int_t y) const;
 
   ClassDef(THealPix, 0);
 };
@@ -109,6 +125,8 @@ public:
   
   virtual void       Copy(TObject& newhp) const;
   static  THealPixD* ReadFits(const char* fname, const char* colname);
+  virtual void       SetBinContent(Int_t bin, Double_t content);
+  virtual void       SetBinsLength(Int_t n=-1);
 
   ClassDef(THealPixD, 0);
 };
