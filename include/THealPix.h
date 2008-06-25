@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.5 2008/06/25 06:03:18 oxon Exp $
+// $Id: THealPix.h,v 1.6 2008/06/25 06:52:08 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -70,9 +70,16 @@ protected:
 			       const char* colname, HealHeader_t& head);
 
 public:
+  // THealPix status bits
+  enum {
+    kCanRebin  = BIT(11), // can rebin axis
+    kIsAverage = BIT(18)  // Bin contents are average (used by Add)
+  };
+
   THealPix(const THealPix&);
   virtual ~THealPix();
   
+  virtual void     Add(const THealPix* hp1, const THealPix* hp2, Double_t c1 = 1, Double_t c2 = 1);
   virtual void     AddBinContent(Int_t bin);
   virtual void     AddBinContent(Int_t bin, Double_t w);
   static  void     AddDirectory(Bool_t add = kTRUE);
@@ -92,8 +99,9 @@ public:
   virtual std::string GetTypeString() const;
   virtual std::string GetUnit() const { return fUnit;}
   virtual Bool_t   IsNested() const {return fIsNested;}
-  virtual void     Paint(Option_t *option="");
+  virtual void     Paint(Option_t* option = "");
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
+  virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
   virtual void     SetBinContent(Int_t bin, Double_t content);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
   virtual void     SetEntries(Double_t n) {fEntries = n;}

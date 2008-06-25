@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.5 2008/06/25 06:03:19 oxon Exp $
+// $Id: THealPix.cxx,v 1.6 2008/06/25 06:52:09 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -83,6 +83,49 @@ THealPix::THealPix(const THealPix& hp) : TNamed()
 void THealPix::AddDirectory(Bool_t add)
 {
   fgAddDirectory = add;
+}
+
+//______________________________________________________________________________
+void THealPix::Add(const THealPix* hp1, const THealPix* hp2, Double_t c1, Double_t c2)
+{
+  if(!hp1 || !hp2){
+    Error("Add", "Attempt to add a non-existing HEALPix");
+    return;
+  } // if
+
+  Bool_t normWidth = kFALSE;
+  if(hp1 == hp2 && c2 < 0){
+    c2 = 0;
+    normWidth = kTRUE;
+  } // if
+  // Check HEALPix compatibility
+  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()
+  || fOrder != hp2->GetOrder() || fIsNested != hp2->IsNested()){
+    Error("Add", "Attempt to add HEALPixs with different number of order or scheme");
+    return;
+  } // if
+
+  // Add statistics
+  Double_t nEntries = c1*hp1->GetEntries() + c2*hp2->GetEntries();
+  
+  for(Int_t i = 0; i < fNpix; i++){
+    if(hp1->TestBit(kIsAverage) && hp2->TestBit(kIsAverage)){
+      Double_t v1 = hp1->GetBinContent(i);
+      Double_t v2 = hp2->GetBinContent(i);
+      SetBinContent(i, v1 + v2); // to be modified
+    } else {
+      if(normWidth){
+	Double_t w = 4.*TMath::Pi()/fNpix;
+	Double_t cu = c1*hp1->GetBinContent(i)/w;
+	SetBinContent(i, cu);
+      } else {
+	Double_t cu = c1*hp1->GetBinContent(i) + c2*hp2->GetBinContent(i);
+	SetBinContent(i, cu);
+      } // if
+    } // if
+  } // i
+
+  SetEntries(nEntries);
 }
 
 //______________________________________________________________________________
@@ -569,6 +612,20 @@ std::string THealPix::GetTypeString() const
   } // if
 
   return "D";
+}
+
+//_____________________________________________________________________________
+void THealPix::Scale(Double_t c1, Option_t* option)
+{
+  TString opt = option;
+  opt.ToLower();
+  Double_t ent = fEntries;
+  if(opt.Contains("width")){
+    Add(this, this, c1, -1);
+  } else {
+    Add(this, this, c1, 0);
+  } // if
+  fEntries = ent;
 }
 
 //_____________________________________________________________________________
