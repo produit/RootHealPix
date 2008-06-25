@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.8 2008/06/25 17:40:51 oxon Exp $
+// $Id: THealPix.h,v 1.9 2008/06/25 21:25:25 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -96,6 +96,7 @@ public:
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
   virtual Double_t GetBinError(Int_t bin) const;
+  TDirectory*      GetDirectory() const {return fDirectory;}
   static  Bool_t   GetDefaultSumw2();
   virtual Double_t GetEntries() const;
   virtual Int_t    GetNside() const { return fNside;}
