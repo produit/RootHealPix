@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.4 2008/06/25 05:39:26 oxon Exp $
+// $Id: THealPix.cxx,v 1.5 2008/06/25 06:03:19 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -10,7 +10,6 @@
 #include <iostream>
 #include "fitsio.h"
 
-#include "TArrayD.h"
 #include "TDirectory.h"
 #include "TH1.h"
 #include "TMath.h"
@@ -733,6 +732,103 @@ Int_t THealPix::XY2Pix(Int_t x, Int_t y) const
   // Original code is Healpix_Base::xy2pix of HEALPix C++
   return fgTable.U(x&0xff) | (fgTable.U(x>>8)<<16) | (fgTable.U(y&0xff)<<1)
     | (fgTable.U(y>>8)<<17);
+}
+
+ClassImp(THealPixF)
+
+//_____________________________________________________________________________
+// THealPixF methods
+//_____________________________________________________________________________
+THealPixF::THealPixF(): THealPix(), TArrayF()
+{
+}
+
+//_____________________________________________________________________________
+THealPixF::THealPixF(const char* name, const char* title, Int_t order,
+		     Bool_t isNested)
+: THealPix(name, title, order, isNested)
+{
+  fType = TFLOAT;
+  TArrayF::Set(fNpix);
+}
+
+//_____________________________________________________________________________
+THealPixF::THealPixF(const THealPixF& hpd) : THealPix(), TArrayF()
+{
+  ((THealPixF&)hpd).Copy(*this);
+}
+
+//_____________________________________________________________________________
+THealPixF::~THealPixF()
+{
+}
+
+//_____________________________________________________________________________
+void THealPixF::Copy(TObject& newhp) const
+{
+  THealPix::Copy(newhp);
+}
+
+//______________________________________________________________________________
+Double_t THealPixF::GetBinContent(Int_t bin) const
+{
+  if(!fArray){
+    return 0;
+  } // if
+
+  bin = bin < 0 ? 0 : bin;
+  bin = bin < fNpix ? bin : fNpix - 1;
+
+  return Double_t(fArray[bin]);
+}
+
+//______________________________________________________________________________
+THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
+{
+  THealPix::HealHeader_t head;
+  fitsfile* fptr = 0;
+
+  if(!THealPix::ReadFitsHeader(&fptr, fname, colname, head)){
+    return 0;
+  } // if
+
+  THealPixF* hpf = new THealPixF(fname, colname, head.order, head.isNested);
+  hpf->SetUnit(head.tunit);
+
+  Long_t npercol = head.npix/head.nrows;
+  Int_t status = 0;
+
+  for(Int_t i = 0; i < head.nrows; i++){
+    fits_read_col(fptr, TFLOAT, head.colnum, i+1, 1, npercol, 0,
+		  &(hpf->GetArray()[i*npercol]), 0, &status);
+    if(!THealUtil::FitsReportError(status)){
+      delete hpf;
+      return 0;
+    } // if
+  } // i
+
+  return hpf;
+}
+
+//_____________________________________________________________________________
+void THealPixF::SetBinContent(Int_t bin, Double_t content)
+{
+  if(bin < 0 || fNpix <= 0){
+    return;
+  } // if
+  fArray[bin] = content;
+  fEntries++;
+}
+
+//_____________________________________________________________________________
+void THealPixF::SetBinsLength(Int_t n)
+{
+  // Set total number of bins
+  // Reallocate bin contents array
+  if(n < 0){
+    n = fNpix;
+  } // if
+  TArrayF::Set(n);
 }
 
 ClassImp(THealPixD)

@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.4 2008/06/25 05:39:26 oxon Exp $
+// $Id: THealPix.h,v 1.5 2008/06/25 06:03:18 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -12,6 +12,7 @@
 #include <string>
 
 #include "TArrayD.h"
+#include "TArrayF.h"
 #include "TNamed.h"
 
 #include <fitsio.h>
@@ -110,6 +111,28 @@ public:
   virtual Int_t    XY2Pix(Int_t x, Int_t y) const;
 
   ClassDef(THealPix, 0);
+};
+
+//_____________________________________________________________________________
+class THealPixF : public THealPix, public TArrayF {
+public:
+  THealPixF();
+  THealPixF(const char* name, const char* title, Int_t order,
+	    Bool_t isNested = kFALSE);
+  THealPixF(const THealPixF& hpd);
+  virtual ~THealPixF();
+  
+  virtual void       AddBinContent(Int_t bin) {++fArray[bin];}
+  virtual void       AddBinContent(Int_t bin, Double_t w)
+                                  {fArray[bin] += Float_t(w);}
+  virtual Double_t   GetBinContent(Int_t bin) const;
+  
+  virtual void       Copy(TObject& newhp) const;
+  static  THealPixF* ReadFits(const char* fname, const char* colname);
+  virtual void       SetBinContent(Int_t bin, Double_t content);
+  virtual void       SetBinsLength(Int_t n=-1);
+
+  ClassDef(THealPixF, 0);
 };
 
 //_____________________________________________________________________________

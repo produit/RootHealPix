@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.2 2008/06/25 04:32:11 oxon Exp $
+// $Id: LinkDef.h,v 1.3 2008/06/25 06:03:18 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -14,6 +14,7 @@
 
 #pragma link C++ class THealPix+;
 #pragma link C++ class std::vector<THealPix*>+;
+#pragma link C++ class THealPixF+;
 #pragma link C++ class THealPixD+;
 
 #pragma link C++ namespace THealUtil;
