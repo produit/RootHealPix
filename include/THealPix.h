@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.7 2008/06/25 07:30:35 oxon Exp $
+// $Id: THealPix.h,v 1.8 2008/06/25 17:40:51 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -49,8 +49,12 @@ protected:
   Int_t         fType;          //Data type : TDOUBLE, TFLOAT, TINT
   std::string   fUnit;          //Unit of data (used in FITS header)
   Double_t      fEntries;       //Number of entries
+  Double_t      fTsumw;         //Total Sum of weights
+  Double_t      fTsumw2;        //Total Sum of squares of weights
+  TArrayD       fSumw2;         //Total Sum of squares of weights
   TDirectory*   fDirectory;     //!Pointer to directory holding this HEALPixxs
   static Bool_t fgAddDirectory; //!flag to add HEALPixs to the directory
+  static Bool_t fgDefaultSumw2; //!flag to call THealPix::Sumw2 automatically at histogram creation time
   static THealTable fgTable;    //!ctab and utab holder
   static const Int_t fgJrll[];  //!
   static const Int_t fgJpll[];  //!
@@ -91,12 +95,17 @@ public:
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
+  virtual Double_t GetBinError(Int_t bin) const;
+  static  Bool_t   GetDefaultSumw2();
   virtual Double_t GetEntries() const;
   virtual Int_t    GetNside() const { return fNside;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
   virtual Int_t    GetOrder() const { return fOrder;}
   virtual std::string GetSchemeString() const;
+  virtual TArrayD* GetSumw2() {return &fSumw2;}
+  virtual const TArrayD* GetSumw2() const {return &fSumw2;}
+  virtual Int_t    GetSumw2N() const {return fSumw2.fN;}
   virtual Int_t    GetType() const { return fType;}
   virtual std::string GetTypeString() const;
   virtual std::string GetUnit() const { return fUnit;}
@@ -106,13 +115,15 @@ public:
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
   virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
   virtual void     SetBinContent(Int_t bin, Double_t content);
+  virtual void     SetBinError(Int_t bin, Double_t error);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
+  static  void     SetDefaultSumw2(Bool_t sumw2=kTRUE);
   virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
-  
+  virtual void     SetDirectory(TDirectory *dir);
   virtual void     SetEntries(Double_t n) {fEntries = n;}
   virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
-  virtual void     SetDirectory(TDirectory *dir);
+  virtual void     Sumw2();
   virtual void     Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
   virtual Int_t    XYF2Nest(Int_t x, Int_t y, Int_t face) const;
   virtual void     Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;

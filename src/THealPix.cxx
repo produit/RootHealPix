@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.8 2008/06/25 07:59:18 oxon Exp $
+// $Id: THealPix.cxx,v 1.9 2008/06/25 17:40:52 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -20,6 +20,7 @@
 #include "THealUtil.h"
 
 Bool_t THealPix::fgAddDirectory = kTRUE;
+Bool_t THealPix::fgDefaultSumw2 = kFALSE;
 THealPix::THealTable THealPix::fgTable = THealPix::THealTable();
 const Int_t THealPix::fgJrll[] = {2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4};
 const Int_t THealPix::fgJpll[] = {1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7};
@@ -41,7 +42,9 @@ THealPix::THealPix()
 : TNamed(),
   fIsNested(kFALSE),
   fUnit(""),
-  fEntries(0),						 
+  fEntries(0),
+  fTsumw(0),		 
+  fTsumw2(0),						 
   fDirectory(0)
 {
   SetOrder(0);
@@ -71,6 +74,9 @@ THealPix::THealPix(const char* name, const char* title, Int_t order,
   if(order > 13) order = 13;
 
   SetOrder(order);
+  if(fgDefaultSumw2){
+    Sumw2();
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -99,20 +105,37 @@ void THealPix::Add(const THealPix* hp1, Double_t c1)
     return;
   } // if
 
+  // Create Sumw2 if hp1 has Sumw2 set
+  if(fSumw2.fN == 0 && hp1->GetSumw2N() != 0){
+    Sumw2();
+  } // if
+
   // Add statistics
   fEntries += c1*hp1->GetEntries();
  
   Double_t factor = 1;
-  //if (h1->GetNormFactor() != 0) factor = h1->GetNormFactor()/h1->GetSumOfWeights();;
-  for(Int_t i = 0; i < fNpix; i++){
+  //if (hp1->GetNormFactor() != 0) factor = hp1->GetNormFactor()/hp1->GetSumOfWeights();;
+  for(Int_t bin = 0; bin < fNpix; bin++){
     //special case where histograms have the kIsAverage bit set
     if(this->TestBit(kIsAverage) && hp1->TestBit(kIsAverage)){
-      Double_t v1 = hp1->GetBinContent(i);
-      Double_t v2 = this->GetBinContent(i);
-      SetBinContent(i, v1 + v2);
+      Double_t v1 = hp1->GetBinContent(bin);
+      Double_t v2 = this->GetBinContent(bin);
+      Double_t e1 = hp1->GetBinError(bin);
+      Double_t e2 = this->GetBinError(bin);
+      Double_t w1 = 1., w2 = 1.;
+      if(e1 > 0) w1 = 1./(e1*e1);
+      if(e2 > 0) w2 = 1./(e2*e2);
+      SetBinContent(bin, (w1*v1 + w2*v2)/(w1 + w2));
+      if(fSumw2.fN){
+	fSumw2.fArray[bin] = 1./(w1 + w2);
+      } // if
     } else {
-      Double_t cu = c1*factor*hp1->GetBinContent(i);
-      AddBinContent(i, cu);
+      Double_t cu = c1*factor*hp1->GetBinContent(bin);
+      AddBinContent(bin, cu);
+      if(fSumw2.fN){
+	Double_t e1 = factor*hp1->GetBinError(bin);
+	fSumw2.fArray[bin] += c1*c1*e1*e1;
+      } // if
     } // if
   } // i
 
@@ -138,22 +161,44 @@ void THealPix::Add(const THealPix* hp1, const THealPix* hp2, Double_t c1, Double
     return;
   } // if
 
+  // Create Sumw2 if hp1 or hp2 have Sumw2 set
+  if(fSumw2.fN == 0 && (hp1->GetSumw2N() !=0 || hp2->GetSumw2N()  != 0)){
+    Sumw2();
+  } // if
+
   // Add statistics
   Double_t nEntries = c1*hp1->GetEntries() + c2*hp2->GetEntries();
   
-  for(Int_t i = 0; i < fNpix; i++){
+  for(Int_t bin = 0; bin < fNpix; bin++){
     if(hp1->TestBit(kIsAverage) && hp2->TestBit(kIsAverage)){
-      Double_t v1 = hp1->GetBinContent(i);
-      Double_t v2 = hp2->GetBinContent(i);
-      SetBinContent(i, v1 + v2); // to be modified
+      Double_t v1 = hp1->GetBinContent(bin);
+      Double_t v2 = hp2->GetBinContent(bin);
+      Double_t e1 = hp1->GetBinError(bin);
+      Double_t e2 = hp2->GetBinError(bin);
+      Double_t w1 = 1., w2 = 1.;
+      if (e1 > 0) w1 = 1./(e1*e1);
+      if (e2 > 0) w2 = 1./(e2*e2);
+      SetBinContent(bin, (w1*v1 + w2*v2)/(w1 + w2));
+      if(fSumw2.fN){
+	fSumw2.fArray[bin] = 1./(w1 + w2);
+      } // if
     } else {
       if(normWidth){
 	Double_t w = 4.*TMath::Pi()/fNpix;
-	Double_t cu = c1*hp1->GetBinContent(i)/w;
-	SetBinContent(i, cu);
+	Double_t cu = c1*hp1->GetBinContent(bin)/w;
+	SetBinContent(bin, cu);
+	if(fSumw2.fN){
+	  Double_t e1 = hp1->GetBinError(bin)/w;
+	  fSumw2.fArray[bin] = c1*c1*e1*e1;
+	} // if
       } else {
-	Double_t cu = c1*hp1->GetBinContent(i) + c2*hp2->GetBinContent(i);
-	SetBinContent(i, cu);
+	Double_t cu = c1*hp1->GetBinContent(bin) + c2*hp2->GetBinContent(bin);
+	SetBinContent(bin, cu);
+	if(fSumw2.fN){
+	  Double_t e1 = hp1->GetBinError(bin);
+	  Double_t e2 = hp2->GetBinError(bin);
+	  fSumw2.fArray[bin] = c1*c1*e1*e1 + c2*c2*e2*e2;
+	} // if
       } // if
     } // if
   } // i
@@ -177,6 +222,151 @@ void THealPix::AddBinContent(Int_t, Double_t)
 Bool_t THealPix::AddDirectoryStatus()
 {
   return fgAddDirectory;
+}
+
+//_____________________________________________________________________________
+void THealPix::Build()
+{
+  fEntries    = 0;
+  fTsumw      = 0;
+  fTsumw2     = 0;
+  fDirectory  = 0;
+
+  SetTitle(fTitle.Data());
+  
+  if(THealPix::AddDirectoryStatus()){
+    fDirectory = gDirectory;
+    if(fDirectory){
+      fDirectory->Append(this, kTRUE);
+    } // if
+  } // if
+}
+
+//_____________________________________________________________________________
+void THealPix::Copy(TObject& obj) const
+{
+  if(((THealPix&)obj).fDirectory){
+    // We are likely to change the hash value of this object
+    // with TNamed::Copy, to keep things correct, we need to
+    // clean up its existing entries.
+    ((THealPix&)obj).fDirectory->Remove(&obj);
+    ((THealPix&)obj).fDirectory = 0;
+  } // if
+  TNamed::Copy(obj);
+  ((THealPix&)obj).fOrder    = fOrder;
+  ((THealPix&)obj).fNside    = fNside;
+  ((THealPix&)obj).fNpix     = fNpix;
+  ((THealPix&)obj).fNpFace   = fNpFace;
+  ((THealPix&)obj).fNcap     = fNcap;
+  ((THealPix&)obj).fIsDegree = fIsDegree;
+  ((THealPix&)obj).fIsNested = fIsNested;
+  ((THealPix&)obj).fType     = fType;
+  ((THealPix&)obj).fUnit     = fUnit;
+  ((THealPix&)obj).fTsumw    = fTsumw;
+  ((THealPix&)obj).fTsumw2   = fTsumw2;
+
+  TArray* a = dynamic_cast<TArray*>(&obj);
+  if(a){
+    a->Set(fNpix);
+  } // if
+  for(Int_t i = 0; i < fNpix; i++){
+    ((THealPix&)obj).SetBinContent(i, this->GetBinContent(i));
+  } // i
+  ((THealPix&)obj).fEntries  = fEntries;
+
+  fSumw2.Copy(((THealPix&)obj).fSumw2);
+
+  if(fgAddDirectory && gDirectory){
+    gDirectory->Append(&obj);
+    ((THealPix&)obj).fDirectory = gDirectory;
+  } // if
+}
+
+//______________________________________________________________________________
+void THealPix::Divide(const THealPix* hp1)
+{
+  if(!hp1){
+    Error("Divide", "Attempt to divide by a non-existing HEALPix");
+    return;
+  } // if
+  
+  // Check HEALPix compatibility
+  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()){
+    Error("Divide", "Attempt to devide HEALPixs with different number of order or scheme");
+    return;
+  } // if
+
+  // Create Sumw2 if hp1 has Sumw2 set
+  if(fSumw2.fN == 0 && hp1->GetSumw2N() != 0){
+    Sumw2();
+  } // if
+
+  // Reset statistics
+  Double_t nEntries = fEntries;
+  fEntries = fTsumw = 0;
+
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t c0 = GetBinContent(i);
+    Double_t c1 = hp1->GetBinContent(i);
+    Double_t w;
+    if(c1) w = c0/c1;
+    else   w = 0;
+    SetBinContent(i, w);
+    fEntries++;
+    if(fSumw2.fN){
+      Double_t e0 = GetBinError(i);
+      Double_t e1 = hp1->GetBinError(i);
+      Double_t c12 = c1*c1;
+      if(!c1){
+	fSumw2.fArray[i] = 0;
+	continue;
+      } // if
+      fSumw2.fArray[i] = (e0*e0*c1*c1 + e1*e1*c0*c0)/(c12*c12);
+    } // if
+  } // i
+
+  SetEntries(nEntries);
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(Double_t theta, Double_t phi)
+{
+  /*
+  if(fBuffer){
+    return BufferFill(x, y, 1);
+  } // if
+  */
+
+  Int_t bin = FindBin(theta, phi);
+  fEntries++;
+  AddBinContent(bin);
+  if(fSumw2.fN){
+    fSumw2.fArray[bin]++;
+  } // if
+  fTsumw++;
+  fTsumw2++;
+  return bin;
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
+{
+  /*
+  if(fBuffer){
+    return BufferFill(x, y, w);
+  } // if
+  */
+
+  Int_t bin = FindBin(theta, phi);
+  fEntries++;
+  AddBinContent(bin, w);
+  if(fSumw2.fN){
+    fSumw2.fArray[bin] += w*w;
+  } // if
+  Double_t z = (w > 0 ? w : -w);
+  fTsumw  += z;
+  fTsumw2 += z*z;
+  return bin;
 }
 
 //_____________________________________________________________________________
@@ -293,123 +483,21 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
   } // if
 }
 
-//_____________________________________________________________________________
-void THealPix::Build()
-{
-  fEntries = 0;
-  fDirectory  = 0;
-
-  SetTitle(fTitle.Data());
-  
-  if(THealPix::AddDirectoryStatus()){
-    fDirectory = gDirectory;
-    if(fDirectory){
-      fDirectory->Append(this, kTRUE);
-    } // if
-  } // if
-}
-
-//_____________________________________________________________________________
-void THealPix::Copy(TObject& obj) const
-{
-  if(((THealPix&)obj).fDirectory){
-    // We are likely to change the hash value of this object
-    // with TNamed::Copy, to keep things correct, we need to
-    // clean up its existing entries.
-    ((THealPix&)obj).fDirectory->Remove(&obj);
-    ((THealPix&)obj).fDirectory = 0;
-  } // if
-  TNamed::Copy(obj);
-  ((THealPix&)obj).fOrder    = fOrder;
-  ((THealPix&)obj).fNside    = fNside;
-  ((THealPix&)obj).fNpix     = fNpix;
-  ((THealPix&)obj).fNpFace   = fNpFace;
-  ((THealPix&)obj).fNcap     = fNcap;
-  ((THealPix&)obj).fIsDegree = fIsDegree;
-  ((THealPix&)obj).fIsNested = fIsNested;
-  ((THealPix&)obj).fType     = fType;
-  ((THealPix&)obj).fUnit     = fUnit;
-
-  TArray* a = dynamic_cast<TArray*>(&obj);
-  if(a){
-    a->Set(fNpix);
-  } // if
-  for(Int_t i = 0; i < fNpix; i++){
-    ((THealPix&)obj).SetBinContent(i, this->GetBinContent(i));
-  } // i
-  ((THealPix&)obj).fEntries  = fEntries;
-
-  if(fgAddDirectory && gDirectory){
-    gDirectory->Append(&obj);
-    ((THealPix&)obj).fDirectory = gDirectory;
-  } // if
-}
-
-//______________________________________________________________________________
-void THealPix::Divide(const THealPix* hp1)
-{
-  if(!hp1){
-    Error("Divide", "Attempt to divide by a non-existing HEALPix");
-    return;
-  } // if
-  
-  // Check HEALPix compatibility
-  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()){
-    Error("Divide", "Attempt to devide HEALPixs with different number of order or scheme");
-    return;
-  } // if
-
-  Double_t nEntries = fEntries;
-  fEntries = 0;
-
-  for(Int_t i = 0; i < fNpix; i++){
-    Double_t c0 = GetBinContent(i);
-    Double_t c1 = hp1->GetBinContent(i);
-    Double_t w = c1 ? c0/c1 : 0;
-    SetBinContent(i, w);
-    fEntries++;
-  } // i
-
-  SetEntries(nEntries);
-}
-
-//______________________________________________________________________________
-Int_t THealPix::Fill(Double_t theta, Double_t phi)
-{
-  /*
-  if(fBuffer){
-    return BufferFill(x, y, 1);
-  } // if
-  */
-
-  Int_t bin = FindBin(theta, phi);
-  fEntries++;
-  AddBinContent(bin);
-
-  return bin;
-}
-
-//______________________________________________________________________________
-Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
-{
-  /*
-  if(fBuffer){
-    return BufferFill(x, y, w);
-  } // if
-  */
-
-  Int_t bin = FindBin(theta, phi);
-  fEntries++;
-  AddBinContent(bin, w);
-
-  return bin;
-}
-
 //______________________________________________________________________________
 Double_t THealPix::GetBinContent(Int_t) const
 {
   AbstractMethod("GetBinContent");
   return 0;
+}
+
+//______________________________________________________________________________
+Bool_t THealPix::GetDefaultSumw2()
+{
+  // static function
+  // return kTRUE if THealPix::Sumw2 must be called when creating new HEALPix.
+  // see THealPix::SetDefaultSumw2.
+
+  return fgDefaultSumw2;
 }
 
 //______________________________________________________________________________
@@ -447,15 +535,26 @@ void THealPix::Multiply(const THealPix* hp1)
     return;
   } // if
 
+  // Create Sumw2 if hp1 has Sumw2 set
+  if(fSumw2.fN == 0 && hp1->GetSumw2N() != 0){
+    Sumw2();
+  } // if
+
+  // Reset statistics
   Double_t nEntries = fEntries;
-  fEntries = 0;
+  fEntries = fTsumw = 0;
   
-  for(Int_t i = 0; i < fNpix; i++){
-    Double_t c0 = GetBinContent(i);
-    Double_t c1 = hp1->GetBinContent(i);
+  for(Int_t bin = 0; bin < fNpix; bin++){
+    Double_t c0 = GetBinContent(bin);
+    Double_t c1 = hp1->GetBinContent(bin);
     Double_t w  = c0*c1;
-    SetBinContent(i, w);
+    SetBinContent(bin, w);
     fEntries++;
+    if(fSumw2.fN){
+      Double_t e0 = GetBinError(bin);
+      Double_t e1 = hp1->GetBinError(bin);
+      fSumw2.fArray[bin] = (e0*e0*c1*c1 + e1*e1*c0*c0);
+    } // if
   } // i
 
   SetEntries(nEntries);
@@ -605,6 +704,13 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
   for(Int_t i = 0; i < fNpix; i++){
     oldBins[i] = GetBinContent(i);
   } // i
+  Double_t *oldErrors = 0;
+  if (fSumw2.fN != 0) {
+    oldErrors = new Double_t[fNpix];
+    for(Int_t bin = 0; bin < fNpix; bin++){
+      oldErrors[bin] = GetBinError(bin);
+    } // if
+  } // if
 
   hpnew->SetOrder(neworder);
   hpnew->SetBinsLength(hpnew->GetNpix());
@@ -615,15 +721,25 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
       Int_t div = fNpix/newnpix;
       for(Int_t i = 0; i < newnpix; i++){
 	Double_t content = 0;
+	Double_t error   = 0;
 	for(Int_t j = i*div; j < (i + 1)*div; j++){
 	  content += oldBins[j];
+	  if(oldErrors){
+	    error += oldErrors[j]*oldErrors[j];
+	  } // if
 	} // j
 	hpnew->SetBinContent(i, content);
+	if(oldErrors){
+	  hpnew->SetBinError(i, TMath::Sqrt(error));
+	} // if
       } // i
     } else { // rebin to higher level
       Int_t div = newnpix/fNpix;
       for(Int_t i = 0; i < newnpix; i++){
 	hpnew->SetBinContent(i, oldBins[i/div]/div);
+	if(oldErrors){
+	  hpnew->SetBinError(i, oldErrors[i/div]/TMath::Sqrt(div));
+	} // if
       } // i
     } // if
   } else { // RING
@@ -631,24 +747,38 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
       Int_t div = fNpix/newnpix;
       for(Int_t i = 0; i < newnpix; i++){
 	Double_t content = 0;
+	Double_t error   = 0;
 	Int_t inest = hpnew->Ring2Nest(i);
 	for(Int_t jnest = inest*div; jnest < (inest + 1)*div; jnest++){
 	  Int_t j = Nest2Ring(jnest);
 	  content += oldBins[j];
+	  if(oldErrors){
+	    error += oldErrors[j]*oldErrors[j];
+	  } // if
 	} // j
 	hpnew->SetBinContent(i, content);
+	if(oldErrors){
+	  hpnew->SetBinError(i, TMath::Sqrt(error));
+	} // if
       } // i
     } else { // rebin to higher level
       Int_t div = newnpix/fNpix;
       for(Int_t i = 0; i < newnpix; i++){
 	Int_t inest = hpnew->Ring2Nest(i);
-	hpnew->SetBinContent(i, oldBins[Nest2Ring(inest/div)]/div);
+	Int_t p = Nest2Ring(inest/div);
+	hpnew->SetBinContent(i, oldBins[p]/div);
+	if(oldErrors){
+	  hpnew->SetBinError(i, oldErrors[p]/TMath::Sqrt(div));
+	} // if
       } // i
     } // if
   } // if
 
   hpnew->SetEntries(entries); //was modified by SetBinContent
   delete [] oldBins;
+  if(oldErrors){
+    delete [] oldErrors;
+  } // if
   return hpnew;
 }
 
@@ -656,6 +786,17 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
 void THealPix::SetBinContent(Int_t, Double_t)
 {
   AbstractMethod("SetBinContent");
+}
+
+//______________________________________________________________________________
+void THealPix::SetDefaultSumw2(Bool_t sumw2)
+{
+  // static function.
+  // When this static function is called with sumw2=kTRUE, all new
+  // HEALPix will automatically activate the storage of
+  // the sum of squares of errors, ie THealPix::Sumw2 is automatically called.
+  
+  fgDefaultSumw2 = sumw2;
 }
 
 //_____________________________________________________________________________
@@ -675,6 +816,59 @@ void THealPix::SetOrder(Int_t order)
 void THealPix::SetUnit(const char* unit)
 {
   fUnit = std::string(unit);
+}
+
+//______________________________________________________________________________
+void THealPix::Sumw2()
+{
+  // Create structure to store sum of squares of weights*-*-*-*-*-*-*-*
+  //
+  //     if HEALPix is already filled, the sum of squares of weights
+  //     is filled with the existing bin contents
+  //
+  //     The error per bin will be computed as sqrt(sum of squares of weight)
+  //     for each bin.
+  //
+  //  This function is automatically called when the HEALPix is created
+  //  if the static function THealPix::SetDefaultSumw2 has been called before.
+
+   if(!fgDefaultSumw2 && fSumw2.fN){
+      Warning("Sumw2", "Sum of squares of weights structure already created");
+      return;
+   } // if
+
+   fSumw2.Set(fNpix);
+
+   for(Int_t bin = 0; bin < fNpix; bin++) {
+     fSumw2.fArray[bin] = GetBinContent(bin);
+   } // bin
+}
+
+//______________________________________________________________________________
+Double_t THealPix::GetBinError(Int_t bin) const
+{
+  //   -*-*-*-*-*Return value of error associated to bin number bin*-*-*-*-*
+  //             ==================================================
+  //
+  //    if the sum of squares of weights has been defined (via Sumw2),
+  //    this function returns the sqrt(sum of w2).
+  //    otherwise it returns the sqrt(contents) for this bin.
+  //
+  //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+  if(bin < 0){
+    bin = 0;
+  } // if
+  if(bin >= fNpix){
+    bin = fNpix - 1;
+  } // if
+
+  if(fSumw2.fN){
+    Double_t err2 = fSumw2.fArray[bin];
+    return TMath::Sqrt(err2);
+  } // if
+  Double_t error2 = TMath::Abs(GetBinContent(bin));
+  return TMath::Sqrt(error2);
 }
 
 //_____________________________________________________________________________
@@ -715,6 +909,19 @@ void THealPix::Scale(Double_t c1, Option_t* option)
     Add(this, this, c1, 0);
   } // if
   fEntries = ent;
+}
+
+//______________________________________________________________________________
+void THealPix::SetBinError(Int_t bin, Double_t error)
+{
+  // see convention for numbering bins in THealPix::GetBin
+  if(!fSumw2.fN){
+    Sumw2();
+  } // if
+  if(bin <0 || bin >= fSumw2.fN){
+    return;
+  } // if
+  fSumw2.fArray[bin] = error*error;
 }
 
 //______________________________________________________________________________
@@ -910,6 +1117,9 @@ ClassImp(THealPixF)
 //_____________________________________________________________________________
 THealPixF::THealPixF(): THealPix(), TArrayF()
 {
+  if(fgDefaultSumw2){
+    Sumw2();
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -919,6 +1129,9 @@ THealPixF::THealPixF(const char* name, const char* title, Int_t order,
 {
   fType = TFLOAT;
   TArrayF::Set(fNpix);
+  if(fgDefaultSumw2){
+    Sumw2();
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -987,6 +1200,7 @@ void THealPixF::SetBinContent(Int_t bin, Double_t content)
   } // if
   fArray[bin] = content;
   fEntries++;
+  fTsumw = 0;
 }
 
 //_____________________________________________________________________________
@@ -1073,6 +1287,9 @@ ClassImp(THealPixD)
 //_____________________________________________________________________________
 THealPixD::THealPixD(): THealPix(), TArrayD()
 {
+  if(fgDefaultSumw2){
+    Sumw2();
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -1082,6 +1299,9 @@ THealPixD::THealPixD(const char* name, const char* title, Int_t order,
 {
   fType = TDOUBLE;
   TArrayD::Set(fNpix);
+  if(fgDefaultSumw2){
+    Sumw2();
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -1150,6 +1370,7 @@ void THealPixD::SetBinContent(Int_t bin, Double_t content)
   } // if
   fArray[bin] = content;
   fEntries++;
+  fTsumw = 0;
 }
 
 //_____________________________________________________________________________
