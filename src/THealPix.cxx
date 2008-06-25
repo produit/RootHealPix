@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.9 2008/06/25 17:40:52 oxon Exp $
+// $Id: THealPix.cxx,v 1.10 2008/06/25 23:54:27 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1226,6 +1226,48 @@ THealPixF& THealPixF::operator=(const THealPixF& hp1)
 }
 
 //______________________________________________________________________________
+THealPixF THealPixF::__add__(const THealPixF& hp1) const
+{
+  // Python operator +
+  return *this + hp1;
+}
+
+//______________________________________________________________________________
+THealPixF THealPixF::__div__(const THealPixF& hp1) const
+{
+  // Python operator /
+  return *this / hp1;
+}
+
+//______________________________________________________________________________
+THealPixF THealPixF::__mul__(const THealPixF& hp1) const
+{
+  // Python operator *
+  return *this * hp1;
+}
+
+//______________________________________________________________________________
+THealPixF THealPixF::__mul__(Double_t c1) const
+{
+  // Python operator *
+  return *this*c1;
+}
+
+//______________________________________________________________________________
+THealPixF THealPixF::__rmul__(Double_t c1) const
+{
+  // Python operator *
+  return *this*c1;
+}
+
+//______________________________________________________________________________
+THealPixF THealPixF::__sub__(const THealPixF& hp1) const
+{
+  // Python operator -
+  return *this - hp1;
+}
+
+//______________________________________________________________________________
 THealPixF operator*(Double_t c1, const THealPixF& hp1)
 {
    // Operator *
@@ -1393,6 +1435,48 @@ THealPixD& THealPixD::operator=(const THealPixD& hp1)
     ((THealPixD&)hp1).Copy(*this);
   } // if
   return *this;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__add__(const THealPixD& hp1) const
+{
+  // Python operator +
+  return *this + hp1;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__div__(const THealPixD& hp1) const
+{
+  // Python operator /
+  return *this / hp1;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__mul__(const THealPixD& hp1) const
+{
+  // Python operator *
+  return *this * hp1;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__mul__(Double_t c1) const
+{
+  // Python operator *
+  return *this*c1;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__rmul__(Double_t c1) const
+{
+  // Python operator *
+  return *this*c1;
+}
+
+//______________________________________________________________________________
+THealPixD THealPixD::__sub__(const THealPixD& hp1) const
+{
+  // Python operator -
+  return *this - hp1;
 }
 
 //______________________________________________________________________________

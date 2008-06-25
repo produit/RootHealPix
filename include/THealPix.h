@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.9 2008/06/25 21:25:25 oxon Exp $
+// $Id: THealPix.h,v 1.10 2008/06/25 23:54:26 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -163,6 +163,14 @@ public:
   friend  THealPixF  operator*(const THealPixF &hp1, const THealPixF &hp2);
   friend  THealPixF  operator/(const THealPixF &hp1, const THealPixF &hp2);
 
+  // Operators for PyROOT
+  virtual THealPixF  __add__(const THealPixF& hp1) const;
+  virtual THealPixF  __div__(const THealPixF& hp1) const;
+  virtual THealPixF  __mul__(Double_t c1) const;
+  virtual THealPixF  __mul__(const THealPixF& hp1) const;
+  virtual THealPixF  __rmul__(Double_t c1) const;
+  virtual THealPixF  __sub__(const THealPixF& hp1) const;
+
   ClassDef(THealPixF, 0);
 };
 
@@ -199,6 +207,14 @@ public:
   friend  THealPixD  operator-(const THealPixD& hp1, const THealPixD& hp2);
   friend  THealPixD  operator*(const THealPixD& hp1, const THealPixD& hp2);
   friend  THealPixD  operator/(const THealPixD& hp1, const THealPixD& hp2);
+
+  // Operators for PyROOT
+  virtual THealPixD  __add__(const THealPixD& hp1) const;
+  virtual THealPixD  __div__(const THealPixD& hp1) const;
+  virtual THealPixD  __mul__(Double_t c1) const;
+  virtual THealPixD  __mul__(const THealPixD& hp1) const;
+  virtual THealPixD  __rmul__(Double_t c1) const;
+  virtual THealPixD  __sub__(const THealPixD& hp1) const;
 
   ClassDef(THealPixD, 0);
 };
