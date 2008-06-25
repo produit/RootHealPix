@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.1 2008/06/24 08:16:43 oxon Exp $
+// $Id: LinkDef.h,v 1.2 2008/06/25 04:32:11 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -17,6 +17,12 @@
 #pragma link C++ class THealPixD+;
 
 #pragma link C++ namespace THealUtil;
+#pragma link C++ function THealUtil::FitsReportError(Int_t);
+#pragma link C++ function THealUtil::Nside2Npix(Int_t);
+#pragma link C++ function THealUtil::Order2Nside(Int_t);
+#pragma link C++ function THealUtil::Isqrt(UInt_t);
+#pragma link C++ function THealUtil::Modulo(Double_t, Double_t);
+#pragma link C++ function THealUtil::Modulo(Int_t, Int_t);
+#pragma link C++ function THealUtil::Modulo(Long_t, Long_t);
 #pragma link C++ function THealUtil::SaveToFits(const char*, const std::vector<THealPix*>&);
-
 #endif
