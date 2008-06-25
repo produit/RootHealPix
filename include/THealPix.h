@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.3 2008/06/25 04:28:05 oxon Exp $
+// $Id: THealPix.h,v 1.4 2008/06/25 05:39:26 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -38,20 +38,21 @@ protected:
   };
 
 protected:
-  Int_t         fOrder; //
-  Int_t         fNside; // = 2^fOrder
-  Int_t         fNpix;  // = 12*fNside^2
-  Int_t         fNpFace;// = fNside*fNside (used for faster calculation)
-  Int_t         fNcap;  // = fNpFace*fNside (used for faster calculation)
-  Bool_t        fIsDegree; // deg = true, rad = false
-  Bool_t        fIsNested; // RING = false, NESTED = true
-  Int_t         fType; // Data type : TDOUBLE, TFLOAT, TINT
-  std::string   fUnit;
-  TDirectory*   fDirectory; //!Pointer to directory holding this HEALPixxs
+  Int_t         fOrder;         //Order of resolution
+  Int_t         fNside;         //= 2^fOrder
+  Int_t         fNpix;          //= 12*fNside^2
+  Int_t         fNpFace;        //= fNside*fNside (used for faster calculation)
+  Int_t         fNcap;          //= fNpFace*fNside (used for faster calculation)
+  Bool_t        fIsDegree;      //deg = true, rad = false
+  Bool_t        fIsNested;      //RING = false, NESTED = true
+  Int_t         fType;          //Data type : TDOUBLE, TFLOAT, TINT
+  std::string   fUnit;          //Unit of data (used in FITS header)
+  Double_t      fEntries;       //Number of entries
+  TDirectory*   fDirectory;     //!Pointer to directory holding this HEALPixxs
   static Bool_t fgAddDirectory; //!flag to add HEALPixs to the directory
-  static THealTable fgTable;
-  static const Int_t fgJrll[];
-  static const Int_t fgJpll[];
+  static THealTable fgTable;    //!ctab and utab holder
+  static const Int_t fgJrll[];  //!
+  static const Int_t fgJpll[];  //!
 
 private:
   void Build();
@@ -80,6 +81,7 @@ public:
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
+  virtual Double_t GetEntries() const;
   virtual Int_t    GetNside() const { return fNside;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
@@ -93,6 +95,7 @@ public:
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
   virtual void     SetBinContent(Int_t bin, Double_t content);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
+  virtual void     SetEntries(Double_t n) {fEntries = n;}
   virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
   virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}

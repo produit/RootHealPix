@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.3 2008/06/25 04:28:06 oxon Exp $
+// $Id: THealPix.cxx,v 1.4 2008/06/25 05:39:26 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -42,6 +42,7 @@ THealPix::THealPix()
 : TNamed(),
   fIsNested(kFALSE),
   fUnit(""),
+  fEntries(0),						 
   fDirectory(0)
 {
   SetOrder(0);
@@ -220,6 +221,7 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
 //_____________________________________________________________________________
 void THealPix::Build()
 {
+  fEntries = 0;
   fDirectory  = 0;
 
   SetTitle(fTitle.Data());
@@ -260,6 +262,7 @@ void THealPix::Copy(TObject& obj) const
   for(Int_t i = 0; i < fNpix; i++){
     ((THealPix&)obj).SetBinContent(i, this->GetBinContent(i));
   } // i
+  ((THealPix&)obj).fEntries  = fEntries;
 
   if(fgAddDirectory && gDirectory){
     gDirectory->Append(&obj);
@@ -277,6 +280,7 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi)
   */
 
   Int_t bin = FindBin(theta, phi);
+  fEntries++;
   AddBinContent(bin);
 
   return bin;
@@ -292,6 +296,7 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
   */
 
   Int_t bin = FindBin(theta, phi);
+  fEntries++;
   AddBinContent(bin, w);
 
   return bin;
@@ -302,6 +307,13 @@ Double_t THealPix::GetBinContent(Int_t) const
 {
   AbstractMethod("GetBinContent");
   return 0;
+}
+
+//______________________________________________________________________________
+Double_t THealPix::GetEntries() const
+{
+  // return the current number of entries
+  return fEntries;
 }
 
 //_____________________________________________________________________________
@@ -456,6 +468,8 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
     return hpnew;
   } // if
 
+  // Save old bin contents into a new array
+  Double_t entries = fEntries;
   Double_t* oldBins = new Double_t[fNpix];
   for(Int_t i = 0; i < fNpix; i++){
     oldBins[i] = GetBinContent(i);
@@ -502,6 +516,8 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
     } // if
   } // if
 
+  hpnew->SetEntries(entries); //was modified by SetBinContent
+  delete [] oldBins;
   return hpnew;
 }
 
@@ -802,6 +818,7 @@ void THealPixD::SetBinContent(Int_t bin, Double_t content)
     return;
   } // if
   fArray[bin] = content;
+  fEntries++;
 }
 
 //_____________________________________________________________________________
