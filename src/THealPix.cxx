@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.7 2008/06/25 07:30:36 oxon Exp $
+// $Id: THealPix.cxx,v 1.8 2008/06/25 07:59:18 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -718,7 +718,7 @@ void THealPix::Scale(Double_t c1, Option_t* option)
 }
 
 //______________________________________________________________________________
-void TH1::SetDirectory(TDirectory *dir)
+void THealPix::SetDirectory(TDirectory *dir)
 {
   // By default when a HEALPix is created, it is added to the list
   // of HEALPix objects in the current directory in memory.
