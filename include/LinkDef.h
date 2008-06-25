@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.3 2008/06/25 06:03:18 oxon Exp $
+// $Id: LinkDef.h,v 1.4 2008/06/25 07:30:35 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -16,6 +16,20 @@
 #pragma link C++ class std::vector<THealPix*>+;
 #pragma link C++ class THealPixF+;
 #pragma link C++ class THealPixD+;
+
+#pragma link C++ function operator*(Double_t, THealPixF&);
+#pragma link C++ function operator*(THealPixF&, Double_t);
+#pragma link C++ function operator+(THealPixF&, THealPixF&);
+#pragma link C++ function operator-(THealPixF&, THealPixF&);
+#pragma link C++ function operator*(THealPixF&, THealPixF&);
+#pragma link C++ function operator/(THealPixF&, THealPixF&);
+
+#pragma link C++ function operator*(Double_t, THealPixD&);
+#pragma link C++ function operator*(THealPixD&, Double_t);
+#pragma link C++ function operator+(THealPixD&, THealPixD&);
+#pragma link C++ function operator-(THealPixD&, THealPixD&);
+#pragma link C++ function operator*(THealPixD&, THealPixD&);
+#pragma link C++ function operator/(THealPixD&, THealPixD&);
 
 #pragma link C++ namespace THealUtil;
 #pragma link C++ function THealUtil::FitsReportError(Int_t);

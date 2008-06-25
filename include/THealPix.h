@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.6 2008/06/25 06:52:08 oxon Exp $
+// $Id: THealPix.h,v 1.7 2008/06/25 07:30:35 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -79,11 +79,13 @@ public:
   THealPix(const THealPix&);
   virtual ~THealPix();
   
+  virtual void     Add(const THealPix *hp1, Double_t c1 = 1);
   virtual void     Add(const THealPix* hp1, const THealPix* hp2, Double_t c1 = 1, Double_t c2 = 1);
   virtual void     AddBinContent(Int_t bin);
   virtual void     AddBinContent(Int_t bin, Double_t w);
   static  void     AddDirectory(Bool_t add = kTRUE);
   static  Bool_t   AddDirectoryStatus();
+  virtual void     Divide(const THealPix* hp1);
   virtual void     Draw(Option_t* option = "");
   virtual Int_t    Fill(Double_t theta, Double_t phi);
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
@@ -99,16 +101,18 @@ public:
   virtual std::string GetTypeString() const;
   virtual std::string GetUnit() const { return fUnit;}
   virtual Bool_t   IsNested() const {return fIsNested;}
+  virtual void     Multiply(const THealPix* hp1);
   virtual void     Paint(Option_t* option = "");
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
   virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
   virtual void     SetBinContent(Int_t bin, Double_t content);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
+  virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
+  
   virtual void     SetEntries(Double_t n) {fEntries = n;}
   virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
-  virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
-
+  virtual void     SetDirectory(TDirectory *dir);
   virtual void     Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
   virtual Int_t    XYF2Nest(Int_t x, Int_t y, Int_t face) const;
   virtual void     Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
@@ -139,9 +143,24 @@ public:
   static  THealPixF* ReadFits(const char* fname, const char* colname);
   virtual void       SetBinContent(Int_t bin, Double_t content);
   virtual void       SetBinsLength(Int_t n=-1);
+          THealPixF& operator=(const THealPixF &hp1);
+  friend  THealPixF  operator*(Double_t c1, const THealPixF &hp1);
+  friend  THealPixF  operator*(const THealPixF &hp1, Double_t c1);
+  friend  THealPixF  operator+(const THealPixF &hp1, const THealPixF &hp2);
+  friend  THealPixF  operator-(const THealPixF &hp1, const THealPixF &hp2);
+  friend  THealPixF  operator*(const THealPixF &hp1, const THealPixF &hp2);
+  friend  THealPixF  operator/(const THealPixF &hp1, const THealPixF &hp2);
 
   ClassDef(THealPixF, 0);
 };
+
+THealPixF operator*(Double_t c1, const THealPixF &hp1);
+inline
+THealPixF operator*(const THealPixF &hp1, Double_t c1) {return operator*(c1, hp1);}
+THealPixF operator+(const THealPixF &hp1, const THealPixF &hp2);
+THealPixF operator-(const THealPixF &hp1, const THealPixF &hp2);
+THealPixF operator*(const THealPixF &hp1, const THealPixF &hp2);
+THealPixF operator/(const THealPixF &hp1, const THealPixF &hp2);
 
 //_____________________________________________________________________________
 class THealPixD : public THealPix, public TArrayD {
@@ -161,8 +180,23 @@ public:
   static  THealPixD* ReadFits(const char* fname, const char* colname);
   virtual void       SetBinContent(Int_t bin, Double_t content);
   virtual void       SetBinsLength(Int_t n=-1);
+          THealPixD& operator=(const THealPixD& hp1);
+  friend  THealPixD  operator*(Double_t c1, const THealPixD& hp1);
+  friend  THealPixD  operator*(const THealPixD& hp1, Double_t c1);
+  friend  THealPixD  operator+(const THealPixD& hp1, const THealPixD& hp2);
+  friend  THealPixD  operator-(const THealPixD& hp1, const THealPixD& hp2);
+  friend  THealPixD  operator*(const THealPixD& hp1, const THealPixD& hp2);
+  friend  THealPixD  operator/(const THealPixD& hp1, const THealPixD& hp2);
 
   ClassDef(THealPixD, 0);
 };
+
+THealPixD operator*(Double_t c1, const THealPixD& hp1);
+inline
+THealPixD operator*(const THealPixD& hp1, Double_t c1) {return operator*(c1, hp1);}
+THealPixD operator+(const THealPixD& hp1, const THealPixD& hp2);
+THealPixD operator-(const THealPixD& hp1, const THealPixD& hp2);
+THealPixD operator*(const THealPixD& hp1, const THealPixD& hp2);
+THealPixD operator/(const THealPixD& hp1, const THealPixD& hp2);
 
 #endif // T_HEAL_PIX

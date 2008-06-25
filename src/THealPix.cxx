@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.6 2008/06/25 06:52:09 oxon Exp $
+// $Id: THealPix.cxx,v 1.7 2008/06/25 07:30:36 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -83,6 +83,39 @@ THealPix::THealPix(const THealPix& hp) : TNamed()
 void THealPix::AddDirectory(Bool_t add)
 {
   fgAddDirectory = add;
+}
+
+//______________________________________________________________________________
+void THealPix::Add(const THealPix* hp1, Double_t c1)
+{
+  if(!hp1){
+    Error("Add", "Attempt to add a non-existing HEALPix");
+    return;
+  } // if
+  
+  // Check HEALPix compatibility
+  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()){
+    Error("Add", "Attempt to add HEALPixs with different number of order or scheme");
+    return;
+  } // if
+
+  // Add statistics
+  fEntries += c1*hp1->GetEntries();
+ 
+  Double_t factor = 1;
+  //if (h1->GetNormFactor() != 0) factor = h1->GetNormFactor()/h1->GetSumOfWeights();;
+  for(Int_t i = 0; i < fNpix; i++){
+    //special case where histograms have the kIsAverage bit set
+    if(this->TestBit(kIsAverage) && hp1->TestBit(kIsAverage)){
+      Double_t v1 = hp1->GetBinContent(i);
+      Double_t v2 = this->GetBinContent(i);
+      SetBinContent(i, v1 + v2);
+    } else {
+      Double_t cu = c1*factor*hp1->GetBinContent(i);
+      AddBinContent(i, cu);
+    } // if
+  } // i
+
 }
 
 //______________________________________________________________________________
@@ -313,6 +346,34 @@ void THealPix::Copy(TObject& obj) const
 }
 
 //______________________________________________________________________________
+void THealPix::Divide(const THealPix* hp1)
+{
+  if(!hp1){
+    Error("Divide", "Attempt to divide by a non-existing HEALPix");
+    return;
+  } // if
+  
+  // Check HEALPix compatibility
+  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()){
+    Error("Divide", "Attempt to devide HEALPixs with different number of order or scheme");
+    return;
+  } // if
+
+  Double_t nEntries = fEntries;
+  fEntries = 0;
+
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t c0 = GetBinContent(i);
+    Double_t c1 = hp1->GetBinContent(i);
+    Double_t w = c1 ? c0/c1 : 0;
+    SetBinContent(i, w);
+    fEntries++;
+  } // i
+
+  SetEntries(nEntries);
+}
+
+//______________________________________________________________________________
 Int_t THealPix::Fill(Double_t theta, Double_t phi)
 {
   /*
@@ -370,6 +431,34 @@ void THealPix::Draw(Option_t* option)
   } // if
 
   AppendPad(option);
+}
+
+//_____________________________________________________________________________
+void THealPix::Multiply(const THealPix* hp1)
+{
+  if(!hp1){
+    Error("Multiply", "Attempt to multiply a non-existing HEALPix");
+    return;
+  } // if
+  
+  // Check HEALPix compatibility
+  if(fOrder != hp1->GetOrder() || fIsNested != hp1->IsNested()){
+    Error("Multiply", "Attempt to multiply HEALPixs with different number of order or scheme");
+    return;
+  } // if
+
+  Double_t nEntries = fEntries;
+  fEntries = 0;
+  
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t c0 = GetBinContent(i);
+    Double_t c1 = hp1->GetBinContent(i);
+    Double_t w  = c0*c1;
+    SetBinContent(i, w);
+    fEntries++;
+  } // i
+
+  SetEntries(nEntries);
 }
 
 //_____________________________________________________________________________
@@ -626,6 +715,29 @@ void THealPix::Scale(Double_t c1, Option_t* option)
     Add(this, this, c1, 0);
   } // if
   fEntries = ent;
+}
+
+//______________________________________________________________________________
+void TH1::SetDirectory(TDirectory *dir)
+{
+  // By default when a HEALPix is created, it is added to the list
+  // of HEALPix objects in the current directory in memory.
+  // Remove reference to this HEALPix from current directory and add
+  // reference to new directory dir. dir can be 0 in which case the
+  // HEALPix does not belong to any directory.
+
+  if(fDirectory == dir){
+    return;
+  } // if
+  if(fDirectory){
+    fDirectory->Remove(this);
+  } // if
+
+  fDirectory = dir;
+
+  if(fDirectory){
+    fDirectory->Append(this);
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -888,6 +1000,72 @@ void THealPixF::SetBinsLength(Int_t n)
   TArrayF::Set(n);
 }
 
+//______________________________________________________________________________
+THealPixF& THealPixF::operator=(const THealPixF& hp1)
+{
+   // Operator =
+
+  if(this != &hp1){
+    ((THealPixF&)hp1).Copy(*this);
+  } // if
+  return *this;
+}
+
+//______________________________________________________________________________
+THealPixF operator*(Double_t c1, const THealPixF& hp1)
+{
+   // Operator *
+
+   THealPixF hpnew = hp1;
+   hpnew.Scale(c1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixF operator+(const THealPixF& hp1, const THealPixF& hp2)
+{
+   // Operator +
+
+   THealPixF hpnew = hp1;
+   hpnew.Add(&hp2, 1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixF operator-(const THealPixF& hp1, const THealPixF& hp2)
+{
+   // Operator -
+
+   THealPixF hpnew = hp1;
+   hpnew.Add(&hp2, -1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixF operator*(const THealPixF& hp1, const THealPixF& hp2)
+{
+   // Operator *
+
+   THealPixF hpnew = hp1;
+   hpnew.Multiply(&hp2);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixF operator/(const THealPixF& hp1, const THealPixF& hp2)
+{
+   // Operator /
+
+   THealPixF hpnew = hp1;
+   hpnew.Divide(&hp2);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
 ClassImp(THealPixD)
 
 //_____________________________________________________________________________
@@ -985,3 +1163,68 @@ void THealPixD::SetBinsLength(Int_t n)
   TArrayD::Set(n);
 }
 
+//______________________________________________________________________________
+THealPixD& THealPixD::operator=(const THealPixD& hp1)
+{
+   // Operator =
+
+  if(this != &hp1){
+    ((THealPixD&)hp1).Copy(*this);
+  } // if
+  return *this;
+}
+
+//______________________________________________________________________________
+THealPixD operator*(Double_t c1, const THealPixD& hp1)
+{
+   // Operator *
+
+   THealPixD hpnew = hp1;
+   hpnew.Scale(c1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixD operator+(const THealPixD& hp1, const THealPixD& hp2)
+{
+   // Operator +
+
+   THealPixD hpnew = hp1;
+   hpnew.Add(&hp2, 1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixD operator-(const THealPixD& hp1, const THealPixD& hp2)
+{
+   // Operator -
+
+   THealPixD hpnew = hp1;
+   hpnew.Add(&hp2, -1);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixD operator*(const THealPixD& hp1, const THealPixD& hp2)
+{
+   // Operator *
+
+   THealPixD hpnew = hp1;
+   hpnew.Multiply(&hp2);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
+
+//______________________________________________________________________________
+THealPixD operator/(const THealPixD& hp1, const THealPixD& hp2)
+{
+   // Operator /
+
+   THealPixD hpnew = hp1;
+   hpnew.Divide(&hp2);
+   hpnew.SetDirectory(0);
+   return hpnew;
+}
