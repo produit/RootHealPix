@@ -1,7 +1,32 @@
-$Id: README,v 1.1 2008/06/24 08:16:42 oxon Exp $
+$Id: README,v 1.2 2008/06/26 01:20:05 oxon Exp $
 Author: Akira Okumura 2008/06/23
 
 === RootHealPix Library ===
+RootHealPix is a ROOT library which is able to handle HEALPix like as ROOT
+histogram classes.
+
+=== Install ===
+$ cd RootHealPix
+$ make
+$ export LD_LIBRARY_PATH=`pwd`:$LD_LIBRARY_PATH
+
+# creates HTML document
+$ make doc # open htmldoc/ClassIndex.html with your web browser
+
+# executes unit test
+$ make test
+
+=== Run in ROOT ===
+$ export LD_LIBRARY_PATH=YOUR_ROOTHEALPIX_PATH:$LD_LIBRARY_PATH
+$ root
+root [0] gSystem->Load("libRootHealPix")
+root [1] .x YourMacro.C
+
+=== Run in Python ===
+$ export PYTHONPATH=YOUR_ROOTHEALPIX_PATH:$PYTHONPATH
+$ python
+>>> from ROOT import *
+>>> gSystem.Load("libRootHealPix")
 
 === Acknowledgement ===
 RootHealPix classes are based on
