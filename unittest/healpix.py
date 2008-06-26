@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# $Id: healpix.py,v 1.1 2008/06/26 00:52:18 oxon Exp $
+# $Id: healpix.py,v 1.2 2008/06/26 06:28:50 oxon Exp $
 # Author: Akira Okumura 2008/06/25
 
 import unittest
-from test import test_support
 
 import ROOT
 
@@ -82,8 +81,6 @@ class TestHealPix(unittest.TestCase):
         for i in range(12):
             self.assertEqual(hpd.GetBinContent(i), i*3.)
             
-def main():
-    test_support.run_unittest(TestHealPix)
-
 if __name__=="__main__":
-    main()
+   suite = unittest.TestLoader().loadTestsFromTestCase(TestHealPix)
+   unittest.TextTestRunner(verbosity=2).run(suite)
