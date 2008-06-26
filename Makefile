@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 2008/06/26 00:51:38 oxon Exp $
+# $Id: Makefile,v 1.3 2008/06/26 01:00:05 oxon Exp $
 # Author: Akira Okumura 2008/06/20
 
 ###############################################################################
@@ -23,6 +23,8 @@ INCS	:=	$(filter-out $(INCDIR)/LinkDef.h,$(wildcard $(INCDIR)/*.h))
 SRCS	:=	$(filter-out $(SRCDIR)/$(DICT).%,$(wildcard $(SRCDIR)/*.$(SrcSuf)))
 OBJS	:=	$(patsubst %.$(SrcSuf),%.$(ObjSuf),$(SRCS)) $(DICTO)
 
+UNITTEST:=	$(wildcard unittest/*.py)
+
 ifeq ($(PLATFORM),macosx)
 LIB	=	lib$(NAME).$(DllSuf)
 LIB_SYMBOLIC=	$(subst .$(DllSuf),.so,$(LIB))
@@ -38,7 +40,7 @@ RMAP	=	lib$(NAME).rootmap
 EXTLIBS	=	-lcfitsio
 
 .SUFFIXES:	.$(SrcSuf) .$(ObjSuf) .$(DllSuf)
-.PHONY:		all clean doc html
+.PHONY:		all clean doc test
 
 all:		$(RMAP)
 
@@ -91,6 +93,13 @@ doc:	all htmldoc
 
 htmldoc:
 	sh mkhtml.sh
+
+test:	
+	@for script in $(UNITTEST);\
+	do \
+	echo "Executing" $$script "...";\
+	python $$script;\
+	done
 
 clean:
 		rm -rf $(LIB) $(LIB_SYMBOLIC) $(OBJS) $(DICTI) $(DICTS) $(DICTO) htmldoc
