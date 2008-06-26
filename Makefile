@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 2008/06/24 08:16:42 oxon Exp $
+# $Id: Makefile,v 1.2 2008/06/26 00:51:38 oxon Exp $
 # Author: Akira Okumura 2008/06/20
 
 ###############################################################################
@@ -38,7 +38,7 @@ RMAP	=	lib$(NAME).rootmap
 EXTLIBS	=	-lcfitsio
 
 .SUFFIXES:	.$(SrcSuf) .$(ObjSuf) .$(DllSuf)
-.PHONY:		all clean
+.PHONY:		all clean doc html
 
 all:		$(RMAP)
 
@@ -87,5 +87,10 @@ $(DICTO):	$(DICTS)
 $(RMAP):	$(LIB) $(INCDIR)/LinkDef.h
 		rlibmap -f -o $@ -l $(LIB) -d $(DEPEND) -c $(INCDIR)/LinkDef.h
 
+doc:	all htmldoc
+
+htmldoc:
+	sh mkhtml.sh
+
 clean:
-		rm -f $(LIB) $(LIB_SYMBOLIC) $(OBJS) $(DICTI) $(DICTS) $(DICTO)
+		rm -rf $(LIB) $(LIB_SYMBOLIC) $(OBJS) $(DICTI) $(DICTS) $(DICTO) htmldoc
