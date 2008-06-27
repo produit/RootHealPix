@@ -1,4 +1,4 @@
-// $Id: THealUtil.h,v 1.2 2008/06/24 23:59:14 oxon Exp $
+// $Id: THealUtil.h,v 1.3 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -16,15 +16,16 @@
 #include "TMath.h"
 
 namespace THealUtil {
-  inline Int_t Nside2Npix(Int_t nside) { return 12*nside*nside;}
-  inline Int_t Order2Nside(Int_t order) { return 1<<order;}
+  inline Int_t    Nside2Npix(Int_t nside) { return 12*nside*nside;}
+  inline Int_t    Order2Nside(Int_t order) { return 1<<order;}
 
-  Bool_t       FitsReportError(Int_t status);
+  Bool_t          FitsReportError(Int_t status);
   inline UInt_t   Isqrt(UInt_t v);
+  void            GetChunkInfo(Int_t nrings, Int_t& nchunks, Int_t& chunksize);
   inline Double_t Modulo(Double_t v1, Double_t v2);
   inline Int_t    Modulo(Int_t v1, Int_t v2);
   inline Long_t   Modulo(Long_t v1, Long_t v2);
-  Bool_t       SaveToFits(const char* fname, const std::vector<THealPix*>& hp);
+  Bool_t          SaveToFits(const char* fname, const std::vector<THealPix*>& hp);
 };
 
 //_____________________________________________________________________________

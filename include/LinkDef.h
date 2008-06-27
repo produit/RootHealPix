@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.4 2008/06/25 07:30:35 oxon Exp $
+// $Id: LinkDef.h,v 1.5 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -11,6 +11,25 @@
 #pragma link off all globals;
 #pragma link off all classes;
 #pragma link off all functions;
+
+#pragma link C++ class THealAlm<Double_t>;
+#pragma link C++ class THealAlm<Float_t>;
+
+#pragma link C++ function operator*(Double_t, THealAlm<Float_t>&);
+#pragma link C++ function operator*(Double_t, THealAlm<Double_t>&);
+#pragma link C++ function operator*(THealAlm<Float_t>&,  Double_t);
+#pragma link C++ function operator*(THealAlm<Double_t>&, Double_t);
+#pragma link C++ function operator+(THealAlm<Float_t>&,  THealAlm<Float_t>&);
+#pragma link C++ function operator+(THealAlm<Double_t>&, THealAlm<Double_t>&);
+#pragma link C++ function operator-(THealAlm<Float_t>&,  THealAlm<Float_t>&);
+#pragma link C++ function operator-(THealAlm<Double_t>&, THealAlm<Double_t>&);
+#pragma link C++ function operator*(THealAlm<Float_t>&,  THealAlm<Float_t>&);
+#pragma link C++ function operator*(THealAlm<Double_t>&, THealAlm<Double_t>&);
+#pragma link C++ function operator/(THealAlm<Float_t>&,  THealAlm<Float_t>&);
+#pragma link C++ function operator/(THealAlm<Double_t>&, THealAlm<Double_t>&);
+
+#pragma link C++ class std::complex<Float_t>;
+#pragma link C++ class std::complex<Double_t>;
 
 #pragma link C++ class THealPix+;
 #pragma link C++ class std::vector<THealPix*>+;

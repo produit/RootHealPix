@@ -1,4 +1,4 @@
-// $Id: THealAlm.h,v 1.1 2008/06/26 23:23:50 oxon Exp $
+// $Id: THealAlm.h,v 1.2 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -14,15 +14,19 @@
 
 #include "TObject.h"
 
+#include "THealFFT.h"
+
 class THealPix;
+
 template<typename T> class THealAlm : public TObject {
 private:
   std::vector<std::complex<T> > fAlm;
   std::complex<T> fAlmDummy;
+  static const std::complex<T> fAlmDummyConst;
   Int_t fLmax;
   Int_t fMmax;
   Int_t fTval;
-  
+
 protected:
   virtual void Copy(TObject& hanew) const;
   
@@ -33,12 +37,14 @@ public:
   virtual void  Add(const THealAlm<T>* ha1, Double_t c1 = 1);
   virtual Int_t GetLmax() const {return fLmax;}
   virtual Int_t GetMmax() const {return fMmax;}
+  virtual std::complex<T>* GetMstart(Int_t m) {return &(fAlm[(m*(fTval - m))>>1]);}
   virtual void  Divide(const THealAlm<T>* ha1);
   virtual void  Multiply(const THealAlm<T>* ha1);
   virtual void  ResetLM(Int_t lmax, Int_t mmax);
-  
-        std::vector<std::complex<T> >& operator()(Int_t l, Int_t m);
-  const std::vector<std::complex<T> >& operator()(Int_t l, Int_t m) const;
+  virtual void  SetToZero();
+
+        std::complex<T>& operator()(Int_t l, Int_t m);
+  const std::complex<T>& operator()(Int_t l, Int_t m) const;
 
           THealAlm<T>& operator=(const THealAlm<T>& ha1);
   friend  THealAlm<T>  operator*(Double_t c1, const THealAlm<T>& ha1);

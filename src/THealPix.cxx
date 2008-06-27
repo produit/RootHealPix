@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.10 2008/06/25 23:54:27 oxon Exp $
+// $Id: THealPix.cxx,v 1.11 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -505,6 +505,38 @@ Double_t THealPix::GetEntries() const
 {
   // return the current number of entries
   return fEntries;
+}
+
+//______________________________________________________________________________
+void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
+			   Double_t &costheta, Double_t& sintheta,
+			   Bool_t& shifted) const
+{
+  if(!fIsNested){
+    Error("GetRingInfo", "Only NESTED scheme is supported");
+    return;
+  } // if
+
+  Int_t northring = (ring > 2*fNside) ? 4*fNside - ring : ring;
+
+  if(northring < fNside){
+    costheta = 1 - northring*northring*4./fNpix;
+    sintheta = TMath::Sin(2*TMath::ASin(northring/(TMath::Sqrt(6.)*fNside)));
+    ringpix = 4*northring;
+    shifted = kTRUE;
+    startpix = 2*northring*(northring - 1);
+  } else {
+    costheta = (2*fNside - northring)*(8.*fNside/fNpix);
+    sintheta = TMath::Sqrt(1 - costheta*costheta);
+    ringpix = 4*fNside;
+    shifted = ((northring - fNside) & 1) == 0;
+    startpix = fNcap + (northring - fNside)*ringpix;
+  } // if
+
+  if(northring != ring){ // southern hemisphere
+    costheta = -costheta;
+    startpix = fNpix - startpix - ringpix;
+  } // if
 }
 
 //_____________________________________________________________________________

@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.3 2008/06/25 04:30:37 oxon Exp $
+// $Id: THealUtil.cxx,v 1.4 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -28,6 +28,14 @@ Bool_t FitsReportError(Int_t status)
   return kTRUE;
 }
   
+//______________________________________________________________________________
+void GetChunkInfo(Int_t nrings, Int_t& nchunks, Int_t& chunksize)
+{
+  // Original code is get_chunk_info of HEALPix C++
+  nchunks = nrings/TMath::Max(100, nrings/10) + 1;
+  chunksize = (nrings + nchunks - 1)/nchunks;
+}
+
 //______________________________________________________________________________
 Bool_t SaveToFits(const char* fname, const std::vector<THealPix*>& hp)
 {

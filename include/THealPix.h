@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.10 2008/06/25 23:54:26 oxon Exp $
+// $Id: THealPix.h,v 1.11 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -106,6 +106,7 @@ public:
   virtual std::string GetSchemeString() const;
   virtual TArrayD* GetSumw2() {return &fSumw2;}
   virtual const TArrayD* GetSumw2() const {return &fSumw2;}
+  virtual void     GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix, Double_t &costheta, Double_t& sintheta, Bool_t& shifted) const;
   virtual Int_t    GetSumw2N() const {return fSumw2.fN;}
   virtual Int_t    GetType() const { return fType;}
   virtual std::string GetTypeString() const;

@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.1 2008/06/26 23:23:51 oxon Exp $
+// $Id: THealAlm.cxx,v 1.2 2008/06/27 18:35:55 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -6,10 +6,16 @@
    All rights reserved.
 ******************************************************************************/
 
+#include "TMath.h"
+
 #include "THealAlm.h"
 #include "THealPix.h"
+#include "THealUtil.h"
 
 templateClassImp(THealAlm)
+
+template<typename T>
+const std::complex<T> THealAlm<T>::fAlmDummyConst = 0;//std::complex<T>(0, 0);
 
 //_____________________________________________________________________________
 template<typename T>
@@ -32,16 +38,14 @@ THealAlm<T>::THealAlm(const THealAlm<T>& ha) : TObject()
   ((THealAlm<T>&)ha).Copy(*this);
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 template<typename T>
-void THealAlm<T>::ResetLM(Int_t lmax, Int_t mmax)
+void THealAlm<T>::Add(const THealAlm<T>* ha1, Double_t c1)
 {
-  fLmax = (lmax >= 0) ? lmax : 0;
-  mmax  = (mmax >= 0) ? mmax : 0;
-  fMmax = (mmax <= fLmax) ? mmax : fLmax;
-  fTval = 2*fLmax + 1;
-  Int_t n = (fMmax + 1)*(fMmax + 2)/2 + (fMmax + 1)*(fLmax - fMmax);
-  fAlm.resize(n, std::vector<std::complex<T> >(0, 0));
+  if(!ha1){
+    Error("Divide", "Attempt to divide by a non-existing Alm");
+    return;
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -75,28 +79,49 @@ void THealAlm<T>::Multiply(const THealAlm<T>* ha1)
   } // if
 }
 
+//_____________________________________________________________________________
+template<typename T>
+void THealAlm<T>::ResetLM(Int_t lmax, Int_t mmax)
+{
+  fLmax = (lmax >= 0) ? lmax : 0;
+  mmax  = (mmax >= 0) ? mmax : 0;
+  fMmax = (mmax <= fLmax) ? mmax : fLmax;
+  fTval = 2*fLmax + 1;
+  Int_t n = (fMmax + 1)*(fMmax + 2)/2 + (fMmax + 1)*(fLmax - fMmax);
+  //  fAlm.resize(n, std::vector<std::complex<T> >(0, 0));
+  fAlm.resize(n, fAlmDummyConst);
+}
+
+//_____________________________________________________________________________
+template<typename T>
+void THealAlm<T>::SetToZero()
+{
+  for(UInt_t i = 0; i < fAlm.size(); i++){
+    fAlm[i] = 0;
+  } // i
+}
+
 //______________________________________________________________________________
 template<typename T>
-std::vector<std::complex<T> >& THealAlm<T>::operator()(Int_t l, Int_t m)
+std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m)
 {
   if(0 <= l && l <= fLmax && -fMmax <= m && m <= fMmax){
     return fAlm[((m*(fTval - m))>>1) + l];
   } // if
 
-  fAlmDummy = std::complex<T>(0, 0);
+  fAlmDummy = 0;
   return fAlmDummy;
 }
 
 //______________________________________________________________________________
 template<typename T>
-const std::vector<std::complex<T> >& THealAlm<T>::operator()(Int_t l, Int_t m) const
+const std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m) const
 {
   if(0 <= l && l <= fLmax && -fMmax <= m && m <= fMmax){
     return fAlm[((m*(fTval - m))>>1) + l];
   } // if
 
-  fAlmDummy = std::complex<T>(0, 0);
-  return fAlmDummy;
+  return fAlmDummyConst;
 }
 
 //______________________________________________________________________________
@@ -213,3 +238,6 @@ THealAlm<T> operator/(const THealAlm<T>& ha1, const THealAlm<T>& ha2)
    hanew.Divide(&ha2);
    return hanew;
 }
+
+template class THealAlm<Float_t>;
+template class THealAlm<Double_t>;
