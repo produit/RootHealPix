@@ -1,4 +1,4 @@
-// $Id: THealFFT.cxx,v 1.1 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealFFT.cxx,v 1.2 2008/06/30 17:33:09 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1806,13 +1806,13 @@ int largest_prime_factor (int n)
   while (((tmp=(n>>1))<<1)==n)
     { maxdiv=2; n=tmp; }
 
-  limit=sqrt(n+0.01);
+  limit=(int)sqrt(n+0.01);
   for (x=3; x<=limit; x+=2)
   while ((tmp=(n/x))*x==n)
     {
     maxdiv=x;
     n=tmp;
-    limit=sqrt(n+0.01);
+    limit=(int)sqrt(n+0.01);
     }
   if (n>maxdiv) maxdiv=n;
 
@@ -1826,13 +1826,13 @@ int prime_factor_sum (int n)
   while (((tmp=(n>>1))<<1)==n)
     { result+=2; n=tmp; }
 
-  limit=sqrt(n+0.01);
+  limit=(int)sqrt(n+0.01);
   for (x=3; x<=limit; x+=2)
   while ((tmp=(n/x))*x==n)
     {
     result+=x;
     n=tmp;
-    limit=sqrt(n+0.01);
+    limit=(int)sqrt(n+0.01);
     }
   if (n>1) result+=n;
 
