@@ -184,7 +184,8 @@ class Ylmgen
       {
       using namespace std;
 
-      if(m <= mmax){
+      if(m > mmax){
+	printf("get_Ylm: m larger than mmax\n");
 	//planck_assert (m<=mmax, "get_Ylm: m larger than mmax");
 	return;
       } // if
