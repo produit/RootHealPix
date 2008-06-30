@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.13 2008/06/30 19:07:55 oxon Exp $
+// $Id: THealPix.cxx,v 1.14 2008/06/30 19:26:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -15,6 +15,7 @@
 #include "TMath.h"
 #include "TPad.h"
 #include "TROOT.h"
+#include "TVector3.h"
 
 #include "THealPix.h"
 #include "THealUtil.h"
@@ -367,6 +368,30 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
   fTsumw  += z;
   fTsumw2 += z*z;
   return bin;
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(const Double_t* x)
+{
+  TVector3 vec(x);
+
+  if(fIsDegree){
+    return Fill(vec.Theta()*TMath::RadToDeg(), vec.Phi()*TMath::RadToDeg());
+  } else {
+    return Fill(vec.Theta(), vec.Phi());
+  } // if
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(const Double_t* x, Double_t w)
+{
+  TVector3 vec(x);
+
+  if(fIsDegree){
+    return Fill(vec.Theta()*TMath::RadToDeg(), vec.Phi()*TMath::RadToDeg(), w);
+  } else {
+    return Fill(vec.Theta(), vec.Phi(), w);
+  } // if
 }
 
 //_____________________________________________________________________________

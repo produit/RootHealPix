@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.12 2008/06/30 19:07:54 oxon Exp $
+// $Id: THealPix.h,v 1.13 2008/06/30 19:26:09 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -93,6 +93,8 @@ public:
   virtual void     Draw(Option_t* option = "");
   virtual Int_t    Fill(Double_t theta, Double_t phi);
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
+  virtual Int_t    Fill(const Double_t* x);
+  virtual Int_t    Fill(const Double_t* x, Double_t w);
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
   virtual Double_t GetBinError(Int_t bin) const;
