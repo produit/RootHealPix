@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.14 2008/06/30 19:26:10 oxon Exp $
+// $Id: THealPix.cxx,v 1.15 2008/06/30 19:28:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -384,6 +384,30 @@ Int_t THealPix::Fill(const Double_t* x)
 
 //______________________________________________________________________________
 Int_t THealPix::Fill(const Double_t* x, Double_t w)
+{
+  TVector3 vec(x);
+
+  if(fIsDegree){
+    return Fill(vec.Theta()*TMath::RadToDeg(), vec.Phi()*TMath::RadToDeg(), w);
+  } else {
+    return Fill(vec.Theta(), vec.Phi(), w);
+  } // if
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(const Float_t* x)
+{
+  TVector3 vec(x);
+
+  if(fIsDegree){
+    return Fill(vec.Theta()*TMath::RadToDeg(), vec.Phi()*TMath::RadToDeg());
+  } else {
+    return Fill(vec.Theta(), vec.Phi());
+  } // if
+}
+
+//______________________________________________________________________________
+Int_t THealPix::Fill(const Float_t* x, Double_t w)
 {
   TVector3 vec(x);
 
