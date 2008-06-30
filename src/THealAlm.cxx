@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.2 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealAlm.cxx,v 1.3 2008/06/30 16:48:27 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -15,7 +15,7 @@
 templateClassImp(THealAlm)
 
 template<typename T>
-const std::complex<T> THealAlm<T>::fAlmDummyConst = 0;//std::complex<T>(0, 0);
+const std::complex<T> THealAlm<T>::fAlmDummyConst = std::complex<T>(0, 0);
 
 //_____________________________________________________________________________
 template<typename T>
@@ -83,12 +83,12 @@ void THealAlm<T>::Multiply(const THealAlm<T>* ha1)
 template<typename T>
 void THealAlm<T>::ResetLM(Int_t lmax, Int_t mmax)
 {
-  fLmax = (lmax >= 0) ? lmax : 0;
-  mmax  = (mmax >= 0) ? mmax : 0;
+  fLmax = (lmax > 0) ? lmax : 0;
+  mmax  = (mmax > 0) ? mmax : 0;
   fMmax = (mmax <= fLmax) ? mmax : fLmax;
   fTval = 2*fLmax + 1;
   Int_t n = (fMmax + 1)*(fMmax + 2)/2 + (fMmax + 1)*(fLmax - fMmax);
-  //  fAlm.resize(n, std::vector<std::complex<T> >(0, 0));
+
   fAlm.resize(n, fAlmDummyConst);
 }
 
@@ -97,7 +97,7 @@ template<typename T>
 void THealAlm<T>::SetToZero()
 {
   for(UInt_t i = 0; i < fAlm.size(); i++){
-    fAlm[i] = 0;
+    fAlm[i] = fAlmDummyConst;
   } // i
 }
 
@@ -109,7 +109,7 @@ std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m)
     return fAlm[((m*(fTval - m))>>1) + l];
   } // if
 
-  fAlmDummy = 0;
+  fAlmDummy = fAlmDummyConst;
   return fAlmDummy;
 }
 
