@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.11 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealPix.cxx,v 1.12 2008/06/30 16:26:52 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -512,8 +512,8 @@ void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
 			   Double_t &costheta, Double_t& sintheta,
 			   Bool_t& shifted) const
 {
-  if(!fIsNested){
-    Error("GetRingInfo", "Only NESTED scheme is supported");
+  if(fIsNested){
+    Error("GetRingInfo", "Only RING scheme is supported");
     return;
   } // if
 
@@ -924,6 +924,8 @@ std::string THealPix::GetTypeString() const
 {
   if(fType == TDOUBLE){
     return "D";
+  } else if(fType == TFLOAT){
+    return "F";
   } // if
 
   return "D";
