@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.12 2008/06/30 16:26:52 oxon Exp $
+// $Id: THealPix.cxx,v 1.13 2008/06/30 19:07:55 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -907,6 +907,17 @@ Double_t THealPix::GetBinError(Int_t bin) const
 Int_t THealPix::GetNrows() const
 {
   return fOrder < 4 ? 1 : 1024;
+}
+
+//_____________________________________________________________________________
+Double_t THealPix::GetPixelArea(Bool_t degree2) const
+{
+  Double_t area = TMath::Pi()*4/fNpix;
+  if(degree2){
+    area *= TMath::RadToDeg()*TMath::RadToDeg();
+  } // if
+
+  return area;
 }
 
 //_____________________________________________________________________________

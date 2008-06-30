@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.11 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealPix.h,v 1.12 2008/06/30 19:07:54 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -103,6 +103,7 @@ public:
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
   virtual Int_t    GetOrder() const { return fOrder;}
+  virtual Double_t GetPixelArea(Bool_t degree2 = kFALSE) const;
   virtual std::string GetSchemeString() const;
   virtual TArrayD* GetSumw2() {return &fSumw2;}
   virtual const TArrayD* GetSumw2() const {return &fSumw2;}
