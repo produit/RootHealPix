@@ -1,4 +1,4 @@
-// $Id: THealUtil.h,v 1.3 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealUtil.h,v 1.4 2008/07/01 23:03:35 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -25,7 +25,9 @@ namespace THealUtil {
   inline Double_t Modulo(Double_t v1, Double_t v2);
   inline Int_t    Modulo(Int_t v1, Int_t v2);
   inline Long_t   Modulo(Long_t v1, Long_t v2);
+  Bool_t          SaveToFits(const char* fname, const THealPix* hp);
   Bool_t          SaveToFits(const char* fname, const std::vector<THealPix*>& hp);
+  Bool_t          SaveToFits(const char* fname, const std::vector<const THealPix*>& hp);
 };
 
 //_____________________________________________________________________________

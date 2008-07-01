@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.4 2008/06/27 18:35:55 oxon Exp $
+// $Id: THealUtil.cxx,v 1.5 2008/07/01 23:03:35 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -37,7 +37,27 @@ void GetChunkInfo(Int_t nrings, Int_t& nchunks, Int_t& chunksize)
 }
 
 //______________________________________________________________________________
+Bool_t SaveToFits(const char* fname, const THealPix* hp)
+{
+  std::vector<THealPix*> vec;
+  vec.push_back((THealPix*)hp);
+
+  return SaveToFits(fname, vec);
+}
+
+//______________________________________________________________________________
 Bool_t SaveToFits(const char* fname, const std::vector<THealPix*>& hp)
+{
+  std::vector<const THealPix*> vec;
+  for(UInt_t i = 0; i < vec.size(); i++){
+    vec.push_back(hp[i]);
+  } // i
+
+  return SaveToFits(fname, vec);
+}
+
+//______________________________________________________________________________
+Bool_t SaveToFits(const char* fname, const std::vector<const THealPix*>& hp)
 {
   fitsfile* fptr;
   Int_t status = 0;
