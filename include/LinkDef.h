@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.7 2008/07/02 16:11:45 oxon Exp $
+// $Id: LinkDef.h,v 1.8 2008/07/02 17:23:19 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -49,12 +49,12 @@
 
 namespace THealAlmMapTools {
   // Work around a CINT instantiation problem ...
-  void Map2Alm(const THealPix& map, THealAlm<Float_t>& alm, Bool_t add_alm);
-  void Map2Alm(const THealPix& map, THealAlm<Double_t>& alm, Bool_t add_alm);
+  void Map2Alm(const THealPix& map, THealAlm<Float_t>& alm, Bool_t add_alm = kFALSE);
+  void Map2Alm(const THealPix& map, THealAlm<Double_t>& alm, Bool_t add_alm = kFALSE);
   void Map2Alm(const THealPix& map, THealAlm<Float_t>& alm, const
-	       std::vector<Double_t>& weight, Bool_t add_alm);
+	       std::vector<Double_t>& weight, Bool_t add_alm = kFALSE);
   void Map2Alm(const THealPix& map, THealAlm<Double_t>& alm, const
-	       std::vector<Double_t>& weight, Bool_t add_alm);
+	       std::vector<Double_t>& weight, Bool_t add_alm = kFALSE);
 }
 #pragma link C++ namespace THealAlmMapTools;
 #pragma link C++ function THealAlmMapTools::Alm2Map(const THealAlm<Float_t>&, THealPix&);
