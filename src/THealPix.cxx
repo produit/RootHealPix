@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.15 2008/06/30 19:28:10 oxon Exp $
+// $Id: THealPix.cxx,v 1.16 2008/07/02 00:57:11 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -529,6 +529,85 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
     ipf >>= (2*(order_max - fOrder));  // in {0, fNside**2 - 1}
     
     return ipf + (face_num << (2*fOrder));    // in {0, 12*fNside**2 - 1}
+  } // if
+}
+
+//______________________________________________________________________________
+void THealPix::GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const
+{
+  // Oribinal code is Healpix_Base::pix2ang of HEALPix C++
+
+  Double_t fact2 = 4./fNpix;
+  Double_t fact1 = 2*fNside*fact2;
+
+  if(!fIsNested){ // RING
+    if(bin < fNcap){ // North Polar cap
+      Int_t iring = Int_t(.5*(1 + THealUtil::Isqrt(1 + 2*bin))); //counted from North pole
+      Int_t iphi  = (bin + 1) - 2*iring*(iring - 1);
+
+      *theta = TMath::ACos(1.0 - (iring*iring)*fact2);
+      *phi   = (iphi - .5)*TMath::Pi()/(2.*iring);
+    } else if(bin < (fNpix - fNcap)){ // Equatorial region
+      Int_t ip  = bin - fNcap;
+      Int_t iring = ip/(4*fNside) + fNside; // counted from North pole
+      Int_t iphi  = ip%(4*fNside) + 1;
+      // 1 if iring+nside is odd, 1/2 otherwise
+      Double_t fodd = ((iring + fNside)&1) ? 1 : 0.5;
+
+      Int_t nl2 = 2*fNside;
+
+      *theta = TMath::ACos((nl2 - iring)*fact1);
+      *phi   = (iphi - fodd) * TMath::Pi()/nl2;
+    } else { // South Polar cap
+      Int_t ip = fNpix - bin;
+      Int_t iring = int(0.5*(1 + THealUtil::Isqrt(2*ip - 1))); //counted from South pole
+      Int_t iphi  = 4*iring + 1 - (ip - 2*iring*(iring - 1));
+      
+      *theta = TMath::ACos(-1. + (iring*iring)*fact2);
+      *phi   = (iphi - .5)*TMath::Pi()/(2*iring);
+    } // if
+  } else { // NESTED
+    Int_t nl4 = fNside*4;
+    
+    Int_t face_num = bin>>(2*fOrder);
+    Int_t ipf = bin&(fNpFace - 1);
+    
+    Int_t ix, iy;
+    Pix2XY(ipf, ix, iy);
+    
+    Int_t jr = (fgJrll[face_num]<<fOrder) - ix - iy - 1;
+    
+    Int_t nr, kshift;
+    Double_t z;
+    if(jr < fNside){
+      nr = jr;
+      z = 1 - nr*nr*fact2;
+      kshift = 0;
+    } else if(jr > 3*fNside){
+      nr = nl4 - jr;
+      z = nr*nr*fact2 - 1;
+      kshift = 0;
+    } else {
+      nr = fNside;
+      z = (2*fNside - jr)*fact1;
+      kshift = (jr - fNside)&1;
+    } // if
+
+    Int_t jp = (fgJpll[face_num]*nr + ix - iy + 1 + kshift)/2;
+    if(jp > nl4){
+      jp -= nl4;
+    } // if
+    if(jp < 1){
+      jp += nl4;
+    } // if
+    
+    *theta = TMath::ACos(z);
+    *phi   = jp - (kshift + 1)*.5*(TMath::Pi()/2./nr);
+  } // if
+
+  if(fIsDegree){
+    *theta *= TMath::RadToDeg();
+    *phi   *= TMath::RadToDeg();
   } // if
 }
 
