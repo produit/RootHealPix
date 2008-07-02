@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# $Id: healpix.py,v 1.3 2008/06/26 07:23:54 oxon Exp $
+# $Id: healpix.py,v 1.4 2008/07/02 22:40:59 oxon Exp $
 # Author: Akira Okumura 2008/06/25
 
 import unittest
@@ -104,6 +104,19 @@ class TestHealPix(unittest.TestCase):
             for j in range(4):
                 before += hpd2.GetBinContent(i*4 + j)
             self.assertEqual(before, after)
+
+        hpd3.Rebin(3)
+        hpd4.Rebin(3)
+
+        for i in range(hpd3.GetNpix()):
+            self.assertEqual(hpd3.GetBinContent(i), hpd4.GetBinContent(i))
+
+        hpd5.Rebin(3)
+        hpd6.Rebin(3)
+
+        for i in range(hpd5.GetNpix()):
+            self.assertEqual(hpd5.GetBinContent(i), hpd6.GetBinContent(i))
+
             
     def testWeight(self):
         hpd1 = ROOT.THealPixD("hpd1", "title", 0);
