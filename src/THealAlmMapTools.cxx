@@ -1,4 +1,4 @@
-// $Id: THealAlmMapTools.cxx,v 1.2 2008/06/30 16:51:26 oxon Exp $
+// $Id: THealAlmMapTools.cxx,v 1.3 2008/07/02 16:08:50 oxon Exp $
 
 #include <cmath>
 
@@ -200,6 +200,12 @@ end:      b_north[ith][m] = p1+p2; b_south[ith][m] = p1-p2;
     }
   }
 
+template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, Bool_t add_alm)
+{
+  std::vector<Double_t> weight(2*map.GetNside(), 0);
+  Map2Alm(map, alm, weight, add_alm);
+}
+
   template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, const std::vector<Double_t>& weight, Bool_t add_alm)
 {
   if(map.IsNested()){
@@ -293,6 +299,8 @@ end:      ;
 
   template void Alm2Map(const THealAlm<Float_t>& alm, THealPix& map);
   template void Alm2Map(const THealAlm<Double_t>& alm, THealPix& map);
+  template void Map2Alm(const THealPix& map, THealAlm<Float_t>& alm, Bool_t add_alm);
+  template void Map2Alm(const THealPix& map, THealAlm<Double_t>& alm, Bool_t add_alm);
   template void Map2Alm(const THealPix& map, THealAlm<Float_t>& alm, const std::vector<Double_t>& weight, Bool_t add_alm);
   template void Map2Alm(const THealPix& map, THealAlm<Double_t>& alm, const std::vector<Double_t>& weight, Bool_t add_alm);
 }
