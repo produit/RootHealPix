@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.16 2008/07/02 00:57:11 oxon Exp $
+// $Id: THealPix.cxx,v 1.17 2008/07/02 16:20:33 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -530,6 +530,12 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
     
     return ipf + (face_num << (2*fOrder));    // in {0, 12*fNside**2 - 1}
   } // if
+}
+
+//______________________________________________________________________________
+void THealPix::GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const
+{
+  GetBinCenter(bin, &theta, &phi);
 }
 
 //______________________________________________________________________________
