@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.6 2008/07/01 23:05:12 oxon Exp $
+// $Id: THealUtil.cxx,v 1.7 2008/07/03 08:19:49 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -110,6 +110,13 @@ Bool_t SaveToFits(const char* fname, const std::vector<const THealPix*>& hp)
 		     ((THealPixD*)hp[i])->GetArray(), &status);
       Long_t nrows;
       fits_get_num_rows(fptr, &nrows, &status);
+    } else if(hp[i]->GetType() == TFLOAT){
+      fits_write_col(fptr, hp[i]->GetType(), i + 1, 1, 1, hp[i]->GetNpix(),
+		     ((THealPixF*)hp[i])->GetArray(), &status);
+      Long_t nrows;
+      fits_get_num_rows(fptr, &nrows, &status);
+    } else {
+      // How should I do?
     } // if
     if(!THealUtil::FitsReportError(status)){
       fits_close_file(fptr, &status);
