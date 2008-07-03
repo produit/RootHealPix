@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.18 2008/07/03 07:59:24 oxon Exp $
+// $Id: THealPix.cxx,v 1.19 2008/07/03 21:48:37 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -836,8 +836,6 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
 
   head.isNested = isNested;
   head.order    = order;
-  head.nside    = nside;
-  head.npix     = npix;
   head.nrows    = nrows;
   head.colnum   = colnum;
   
@@ -1369,7 +1367,7 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
   THealPixF* hpf = new THealPixF(fname, colname, head.order, head.isNested);
   hpf->SetUnit(head.tunit);
 
-  Long_t npercol = head.npix/head.nrows;
+  Long_t npercol = hpf->GetNpix()/head.nrows;
   Int_t status = 0;
 
   for(Int_t i = 0; i < head.nrows; i++){
@@ -1593,7 +1591,7 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
   THealPixD* hpd = new THealPixD(fname, colname, head.order, head.isNested);
   hpd->SetUnit(head.tunit);
 
-  Long_t npercol = head.npix/head.nrows;
+  Long_t npercol = hpd->GetNpix()/head.nrows;
   Int_t status = 0;
 
   for(Int_t i = 0; i < head.nrows; i++){
