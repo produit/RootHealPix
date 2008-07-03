@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# $Id: healpix.py,v 1.4 2008/07/02 22:40:59 oxon Exp $
+# $Id: healpix.py,v 1.5 2008/07/03 07:56:55 oxon Exp $
 # Author: Akira Okumura 2008/06/25
 
 import unittest
@@ -61,86 +61,106 @@ class TestHealPix(unittest.TestCase):
         """
         Compare bin contents between before/after of rebinning.
         """
-        hpd1 = ROOT.THealPixD("hpd1", "", 3, ROOT.kFALSE) # RING
-        hpd2 = ROOT.THealPixD("hpd2", "", 3, ROOT.kTRUE)  # NESTED
-        hpd1.SetDegree()
-        hpd2.SetDegree()
+        ring3 = ROOT.THealPixD("ring3", "", 3, ROOT.kFALSE) # RING
+        nest3 = ROOT.THealPixD("nest3", "", 3, ROOT.kTRUE)  # NESTED
+        ring3.SetDegree()
+        nest3.SetDegree()
         for theta in range(180):
             for phi in range(360):
-                hpd1.Fill(theta, phi)
-                hpd2.Fill(theta, phi)
+                ring3.Fill(theta, phi)
+                nest3.Fill(theta, phi)
         
-        hpd3 = hpd1.Rebin(4, "hpd3") # higher resolution
-        hpd4 = hpd2.Rebin(4, "hpd4") # higher resolution
-        hpd5 = hpd1.Rebin(2, "hpd5") # lower resolution
-        hpd6 = hpd2.Rebin(2, "hpd6") # lower resolution
+        ring4 = ring3.Rebin(4, "ring4") # higher resolution
+        nest4 = nest3.Rebin(4, "nest4") # higher resolution
+        ring2 = ring3.Rebin(2, "ring2") # lower resolution
+        nest2 = nest3.Rebin(2, "nest2") # lower resolution
 
-        for i in range(hpd1.GetNpix()):
+        for i in range(ring3.GetNpix()):
             # Check RING 3->4 rebinning
-            inest = hpd1.Ring2Nest(i)
-            before = hpd1.GetBinContent(i)
+            inest = ring3.Ring2Nest(i)
+            before = ring3.GetBinContent(i)
             for j in range(4):
-                after = hpd3.GetBinContent(hpd3.Nest2Ring(inest*4 + j))
+                after = ring4.GetBinContent(ring4.Nest2Ring(inest*4 + j))
                 self.assertEqual(before, after*4.)
 
+        for i in range(nest3.GetNpix()):
             # Check NESTED 3->4 rebinning
-            before = hpd2.GetBinContent(i)
+            before = nest3.GetBinContent(i)
             for j in range(4):
-                after = hpd4.GetBinContent(i*4 + j)
+                after = nest4.GetBinContent(i*4 + j)
                 self.assertEqual(before, after*4.)
-        
-        for i in range(hpd5.GetNpix()):
+
+        for i in range(ring2.GetNpix()):
             # Check RING 3->2 rebinning
-            inest = hpd5.Ring2Nest(i)
-            after = hpd5.GetBinContent(i)
-            before = 0
+            inest = ring2.Ring2Nest(i)
+            after = ring2.GetBinContent(i)
+            before = 0.
             for j in range(4):
-                before += hpd1.GetBinContent(hpd1.Nest2Ring(inest*4 + j))
+                before += ring3.GetBinContent(ring3.Nest2Ring(inest*4 + j))
             self.assertEqual(before, after)
 
+        for i in range(nest2.GetNpix()):
             # Check NESTED 3->2 rebinning
-            after = hpd6.GetBinContent(i)
-            before = 0
+            after = nest2.GetBinContent(i)
+            before = 0.
             for j in range(4):
-                before += hpd2.GetBinContent(i*4 + j)
+                before += nest3.GetBinContent(i*4 + j)
             self.assertEqual(before, after)
 
-        hpd3.Rebin(3)
-        hpd4.Rebin(3)
+        ring4.Rebin(3)
 
-        for i in range(hpd3.GetNpix()):
-            self.assertEqual(hpd3.GetBinContent(i), hpd4.GetBinContent(i))
+        for i in range(ring4.GetNpix()):
+            self.assertEqual(ring4.GetBinContent(i), ring3.GetBinContent(i))
 
-        hpd5.Rebin(3)
-        hpd6.Rebin(3)
+        nest4.Rebin(3)
 
-        for i in range(hpd5.GetNpix()):
-            self.assertEqual(hpd5.GetBinContent(i), hpd6.GetBinContent(i))
+        for i in range(ring2.GetNpix()):
+            self.assertEqual(nest4.GetBinContent(i), nest3.GetBinContent(i))
 
             
     def testWeight(self):
-        hpd1 = ROOT.THealPixD("hpd1", "title", 0);
-        for i in range(12):
-            hpd1.SetBinContent(i, i)
+        ring3 = ROOT.THealPixD("ring3", "title", 3, ROOT.kFALSE);
+        nest3 = ROOT.THealPixD("nest3", "title", 3, ROOT.kTRUE);
+        for i in range(ring3.GetNpix()):
+            ring3.SetBinContent(i, i)
+            nest3.SetBinContent(i, i)
 
-        hpd1.Sumw2()
+        ring3.Sumw2()
+        nest3.Sumw2()
         # Check bin errors
-        for i in range(12):
-            self.assertEqual(hpd1.GetBinError(i), i**0.5)
+        for i in range(ring3.GetNpix()):
+            self.assertEqual(ring3.GetBinError(i), i**0.5)
+            self.assertEqual(nest3.GetBinError(i), i**0.5)
 
-        hpd2 = hpd1.Rebin(1, "hpd2")
-        for i in range(hpd1.GetNpix()):
-            e1 = hpd1.GetBinError(i)
+        ring4 = ring3.Rebin(4, "ring4")
+        for i in range(ring3.GetNpix()):
+            e3 = ring3.GetBinError(i)
             for j in range(4):
-                e2 = hpd2.GetBinError(hpd2.Nest2Ring(hpd1.Ring2Nest(i)*4 + j))
-                self.assertEqual(e1, e2*2.)
+                e4 = ring4.GetBinError(ring4.Nest2Ring(ring3.Ring2Nest(i)*4 + j))
+                self.assertAlmostEqual(e3, e4*2.)
 
-        hpd3 = hpd2.Rebin(0, "hpd3")
-        for i in range(hpd3.GetNpix()):
-            e3 = hpd3.GetBinError(i)
+        nest4 = nest3.Rebin(4, "nest4")
+        for i in range(nest3.GetNpix()):
+            e3 = nest3.GetBinError(i)
             for j in range(4):
-                e2 = hpd2.GetBinError(hpd2.Nest2Ring(hpd3.Ring2Nest(i)*4 + j))
-                self.assertEqual(e3, e2*2.)
+                e4 = nest4.GetBinError(i*4 + j)
+                self.assertAlmostEqual(e3, e4*2.)
+
+        ring2 = ring3.Rebin(2, "ring2")
+        for i in range(ring2.GetNpix()):
+            e2 = ring2.GetBinError(i)
+            e3 = 0.
+            for j in range(4):
+                e3 += ring3.GetBinError(ring3.Nest2Ring(ring2.Ring2Nest(i)*4 + j))**2
+            self.assertAlmostEqual(e3, e2**2)
+
+        nest2 = nest3.Rebin(2, "nest2")
+        for i in range(nest2.GetNpix()):
+            e2 = nest2.GetBinError(i)
+            e3 = 0.
+            for j in range(4):
+                e3 += nest3.GetBinError(i*4 + j)**2
+            self.assertAlmostEqual(e3, e2**2)
 
     def testArithmeticOperations(self):
         hpd1 = ROOT.THealPixD("hpd1", "", 0)
