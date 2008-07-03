@@ -1,4 +1,4 @@
-// $Id: THealAlmMapTools.cxx,v 1.3 2008/07/02 16:08:50 oxon Exp $
+// $Id: THealAlmMapTools.cxx,v 1.4 2008/07/03 09:36:17 oxon Exp $
 
 #include <cmath>
 
@@ -202,7 +202,7 @@ end:      b_north[ith][m] = p1+p2; b_south[ith][m] = p1-p2;
 
 template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, Bool_t add_alm)
 {
-  std::vector<Double_t> weight(2*map.GetNside(), 0);
+  std::vector<Double_t> weight(2*map.GetNside(), 1);
   Map2Alm(map, alm, weight, add_alm);
 }
 
