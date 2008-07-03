@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.8 2008/07/02 17:23:19 oxon Exp $
+// $Id: LinkDef.h,v 1.9 2008/07/03 07:59:23 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -28,7 +28,7 @@
 #pragma link C++ function operator/(THealAlm<Float_t>&,  THealAlm<Float_t>&);
 #pragma link C++ function operator/(THealAlm<Double_t>&, THealAlm<Double_t>&);
 
-#pragma link C++ class THealPix+;
+#pragma link C++ class THealPix-;
 #pragma link C++ class std::vector<THealPix*>+;
 #pragma link C++ class THealPixF+;
 #pragma link C++ class THealPixD+;

@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.17 2008/07/02 16:20:33 oxon Exp $
+// $Id: THealPix.cxx,v 1.18 2008/07/03 07:59:24 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -261,7 +261,6 @@ void THealPix::Copy(TObject& obj) const
   ((THealPix&)obj).fNcap     = fNcap;
   ((THealPix&)obj).fIsDegree = fIsDegree;
   ((THealPix&)obj).fIsNested = fIsNested;
-  ((THealPix&)obj).fType     = fType;
   ((THealPix&)obj).fUnit     = fUnit;
   ((THealPix&)obj).fTsumw    = fTsumw;
   ((THealPix&)obj).fTsumw2   = fTsumw2;
@@ -860,91 +859,82 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
   if(newname && strlen(newname) > 0){
     hpnew = (THealPix*)Clone(newname);
   } // if
+
   if(neworder == fOrder){
     return hpnew;
   } // if
 
-  // Save old bin contents into a new array
-  Double_t entries = fEntries;
-  Double_t* oldBins = new Double_t[fNpix];
-  for(Int_t i = 0; i < fNpix; i++){
-    oldBins[i] = GetBinContent(i);
-  } // i
-  Double_t *oldErrors = 0;
-  if (fSumw2.fN != 0) {
-    oldErrors = new Double_t[fNpix];
-    for(Int_t bin = 0; bin < fNpix; bin++){
-      oldErrors[bin] = GetBinError(bin);
-    } // if
-  } // if
+  // If overwrite this, clone this to keep original information
+  THealPix* hpold = (hpnew == this) ? (THealPix*)Clone() : this;
 
   hpnew->SetOrder(neworder);
-  hpnew->SetBinsLength(hpnew->GetNpix());
+  hpnew->SetBins(hpnew->GetNpix());
 
   Int_t newnpix  = hpnew->GetNpix();
-  if(IsNested()){ // NESTED
-    if(neworder < fOrder){ // rebin to lower level
-      Int_t div = fNpix/newnpix;
+  if(hpnew->IsNested()){ // NESTED
+    if(neworder < hpold->GetOrder()){ // rebin to lower level
+      Int_t div = hpold->GetNpix()/newnpix;
       for(Int_t i = 0; i < newnpix; i++){
 	Double_t content = 0;
 	Double_t error   = 0;
 	for(Int_t j = i*div; j < (i + 1)*div; j++){
-	  content += oldBins[j];
-	  if(oldErrors){
-	    error += oldErrors[j]*oldErrors[j];
+	  content += hpold->GetBinContent(j);
+	  if(hpold->GetSumw2N()){
+	    error += hpold->GetBinError(j)*hpold->GetBinError(j);
 	  } // if
 	} // j
 	hpnew->SetBinContent(i, content);
-	if(oldErrors){
+	if(hpold->GetSumw2N()){
 	  hpnew->SetBinError(i, TMath::Sqrt(error));
 	} // if
       } // i
     } else { // rebin to higher level
-      Int_t div = newnpix/fNpix;
+      Int_t div = newnpix/hpold->GetNpix();
       for(Int_t i = 0; i < newnpix; i++){
-	hpnew->SetBinContent(i, oldBins[i/div]/div);
-	if(oldErrors){
-	  hpnew->SetBinError(i, oldErrors[i/div]/TMath::Sqrt(div));
+	hpnew->SetBinContent(i, hpold->GetBinContent(i/div)/div);
+	if(hpold->GetSumw2N()){
+	  hpnew->SetBinError(i, hpold->GetBinError(i/div)/TMath::Sqrt(div));
 	} // if
       } // i
     } // if
   } else { // RING
-    if(neworder < fOrder){ // rebin to lower level
-      Int_t div = fNpix/newnpix;
+    if(neworder < hpold->GetOrder()){ // rebin to lower level
+      Int_t div = hpold->GetNpix()/newnpix;
       for(Int_t i = 0; i < newnpix; i++){
 	Double_t content = 0;
 	Double_t error   = 0;
 	Int_t inest = hpnew->Ring2Nest(i);
 	for(Int_t jnest = inest*div; jnest < (inest + 1)*div; jnest++){
-	  Int_t j = Nest2Ring(jnest);
-	  content += oldBins[j];
-	  if(oldErrors){
-	    error += oldErrors[j]*oldErrors[j];
+	  Int_t j = hpold->Nest2Ring(jnest);
+	  content += hpold->GetBinContent(j);
+	  if(hpold->GetSumw2N()){
+	    error += hpold->GetBinError(j)*hpold->GetBinError(j);
 	  } // if
 	} // j
 	hpnew->SetBinContent(i, content);
-	if(oldErrors){
+	if(hpold->GetSumw2N()){
 	  hpnew->SetBinError(i, TMath::Sqrt(error));
 	} // if
       } // i
     } else { // rebin to higher level
-      Int_t div = newnpix/fNpix;
+      Int_t div = newnpix/hpold->GetNpix();
       for(Int_t i = 0; i < newnpix; i++){
 	Int_t inest = hpnew->Ring2Nest(i);
-	Int_t p = Nest2Ring(inest/div);
-	hpnew->SetBinContent(i, oldBins[p]/div);
-	if(oldErrors){
-	  hpnew->SetBinError(i, oldErrors[p]/TMath::Sqrt(div));
+	Int_t p = hpold->Nest2Ring(inest/div);
+	hpnew->SetBinContent(i, hpold->GetBinContent(p)/div);
+	if(hpold->GetSumw2N()){
+	  hpnew->SetBinError(i, hpold->GetBinError(p)/TMath::Sqrt(div));
 	} // if
       } // i
     } // if
   } // if
 
-  hpnew->SetEntries(entries); //was modified by SetBinContent
-  delete [] oldBins;
-  if(oldErrors){
-    delete [] oldErrors;
+  hpnew->SetEntries(hpold->GetEntries()); //was modified by SetBinContent
+
+  if(hpold != this){
+    delete hpold;
   } // if
+
   return hpnew;
 }
 
@@ -982,6 +972,20 @@ void THealPix::SetOrder(Int_t order)
 void THealPix::SetUnit(const char* unit)
 {
   fUnit = std::string(unit);
+}
+
+//_____________________________________________________________________________
+void THealPix::Streamer(TBuffer& b)
+{
+  if(b.IsReading()){
+    UInt_t R__s, R__c;
+    Version_t R__v = b.ReadVersion(&R__s, &R__c);
+    fDirectory = 0;
+    b.ReadClassBuffer(THealPix::Class(), this, R__v, R__s, R__c);
+    SetOrder(fOrder);
+  } else {
+    b.WriteClassBuffer(THealPix::Class(), this);
+  }
 }
 
 //______________________________________________________________________________
@@ -1065,18 +1069,6 @@ std::string THealPix::GetSchemeString() const
 }
 
 //_____________________________________________________________________________
-std::string THealPix::GetTypeString() const
-{
-  if(fType == TDOUBLE){
-    return "D";
-  } else if(fType == TFLOAT){
-    return "F";
-  } // if
-
-  return "D";
-}
-
-//_____________________________________________________________________________
 void THealPix::Scale(Double_t c1, Option_t* option)
 {
   TString opt = option;
@@ -1101,6 +1093,15 @@ void THealPix::SetBinError(Int_t bin, Double_t error)
     return;
   } // if
   fSumw2.fArray[bin] = error*error;
+}
+
+//______________________________________________________________________________
+void THealPix::SetBins(Int_t n)
+{
+  SetBinsLength(n);
+  if(fSumw2.fN){
+    fSumw2.Set(n);
+  } // if
 }
 
 //______________________________________________________________________________
@@ -1296,6 +1297,7 @@ ClassImp(THealPixF)
 //_____________________________________________________________________________
 THealPixF::THealPixF(): THealPix(), TArrayF()
 {
+  SetBinsLength(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
   } // if
@@ -1306,7 +1308,6 @@ THealPixF::THealPixF(const char* name, const char* title, Int_t order,
 		     Bool_t isNested)
 : THealPix(name, title, order, isNested)
 {
-  fType = TFLOAT;
   TArrayF::Set(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -1341,6 +1342,18 @@ Double_t THealPixF::GetBinContent(Int_t bin) const
   bin = bin < fNpix ? bin : fNpix - 1;
 
   return Double_t(fArray[bin]);
+}
+
+//_____________________________________________________________________________
+Int_t THealPixF::GetType() const
+{
+  return TFLOAT;
+}
+
+//_____________________________________________________________________________
+std::string THealPixF::GetTypeString() const
+{
+  return "F";
 }
 
 //______________________________________________________________________________
@@ -1508,6 +1521,7 @@ ClassImp(THealPixD)
 //_____________________________________________________________________________
 THealPixD::THealPixD(): THealPix(), TArrayD()
 {
+  SetBinsLength(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
   } // if
@@ -1518,7 +1532,6 @@ THealPixD::THealPixD(const char* name, const char* title, Int_t order,
 		     Bool_t isNested)
 : THealPix(name, title, order, isNested)
 {
-  fType = TDOUBLE;
   TArrayD::Set(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -1553,6 +1566,18 @@ Double_t THealPixD::GetBinContent(Int_t bin) const
   bin = bin < fNpix ? bin : fNpix - 1;
 
   return Double_t(fArray[bin]);
+}
+
+//_____________________________________________________________________________
+Int_t THealPixD::GetType() const
+{
+  return TDOUBLE;
+}
+
+//_____________________________________________________________________________
+std::string THealPixD::GetTypeString() const
+{
+  return "D";
 }
 
 //______________________________________________________________________________

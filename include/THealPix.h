@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.16 2008/07/02 16:20:32 oxon Exp $
+// $Id: THealPix.h,v 1.17 2008/07/03 07:59:23 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -40,13 +40,12 @@ protected:
 
 protected:
   Int_t         fOrder;         //Order of resolution
-  Int_t         fNside;         //= 2^fOrder
-  Int_t         fNpix;          //= 12*fNside^2
-  Int_t         fNpFace;        //= fNside*fNside (used for faster calculation)
-  Int_t         fNcap;          //= fNpFace*fNside (used for faster calculation)
+  Int_t         fNside;         //!= 2^fOrder
+  Int_t         fNpix;          //!= 12*fNside^2
+  Int_t         fNpFace;        //!= fNside*fNside (used for faster calculation)
+  Int_t         fNcap;          //!= fNpFace*fNside (used for faster calculation)
   Bool_t        fIsDegree;      //deg = true, rad = false
   Bool_t        fIsNested;      //RING = false, NESTED = true
-  Int_t         fType;          //Data type : TDOUBLE, TFLOAT, TINT
   std::string   fUnit;          //Unit of data (used in FITS header)
   Double_t      fEntries;       //Number of entries
   Double_t      fTsumw;         //Total Sum of weights
@@ -115,8 +114,8 @@ public:
   virtual const TArrayD* GetSumw2() const {return &fSumw2;}
   virtual void     GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix, Double_t &costheta, Double_t& sintheta, Bool_t& shifted) const;
   virtual Int_t    GetSumw2N() const {return fSumw2.fN;}
-  virtual Int_t    GetType() const { return fType;}
-  virtual std::string GetTypeString() const;
+  virtual Int_t    GetType() const = 0;
+  virtual std::string GetTypeString() const = 0;
   virtual std::string GetUnit() const { return fUnit;}
   virtual Bool_t   IsNested() const {return fIsNested;}
   virtual void     Multiply(const THealPix* hp1);
@@ -125,6 +124,7 @@ public:
   virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
   virtual void     SetBinContent(Int_t bin, Double_t content);
   virtual void     SetBinError(Int_t bin, Double_t error);
+  virtual void     SetBins(Int_t n);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
   static  void     SetDefaultSumw2(Bool_t sumw2=kTRUE);
   virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
@@ -142,7 +142,7 @@ public:
   virtual void     Pix2XY(Int_t pix, Int_t& x, Int_t& y) const;
   virtual Int_t    XY2Pix(Int_t x, Int_t y) const;
 
-  ClassDef(THealPix, 0);
+  ClassDef(THealPix, 1);
 };
 
 //_____________________________________________________________________________
@@ -157,9 +157,10 @@ public:
   virtual void       AddBinContent(Int_t bin) {++fArray[bin];}
   virtual void       AddBinContent(Int_t bin, Double_t w)
                                   {fArray[bin] += Float_t(w);}
-  virtual Double_t   GetBinContent(Int_t bin) const;
-  
   virtual void       Copy(TObject& newhp) const;
+  virtual Double_t   GetBinContent(Int_t bin) const;
+  virtual Int_t      GetType() const;
+  virtual std::string GetTypeString() const;
   static  THealPixF* ReadFits(const char* fname, const char* colname);
   virtual void       SetBinContent(Int_t bin, Double_t content);
   virtual void       SetBinsLength(Int_t n=-1);
@@ -179,7 +180,7 @@ public:
   virtual THealPixF  __rmul__(Double_t c1) const;
   virtual THealPixF  __sub__(const THealPixF& hp1) const;
 
-  ClassDef(THealPixF, 0);
+  ClassDef(THealPixF, 1);
 };
 
 THealPixF operator*(Double_t c1, const THealPixF &hp1);
@@ -202,9 +203,10 @@ public:
   virtual void       AddBinContent(Int_t bin) {++fArray[bin];}
   virtual void       AddBinContent(Int_t bin, Double_t w)
                                   {fArray[bin] += Double_t(w);}
-  virtual Double_t   GetBinContent(Int_t bin) const;
-  
   virtual void       Copy(TObject& newhp) const;
+  virtual Double_t   GetBinContent(Int_t bin) const;
+  virtual Int_t      GetType() const;
+  virtual std::string GetTypeString() const;
   static  THealPixD* ReadFits(const char* fname, const char* colname);
   virtual void       SetBinContent(Int_t bin, Double_t content);
   virtual void       SetBinsLength(Int_t n=-1);
@@ -224,7 +226,7 @@ public:
   virtual THealPixD  __rmul__(Double_t c1) const;
   virtual THealPixD  __sub__(const THealPixD& hp1) const;
 
-  ClassDef(THealPixD, 0);
+  ClassDef(THealPixD, 1);
 };
 
 THealPixD operator*(Double_t c1, const THealPixD& hp1);
