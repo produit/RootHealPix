@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.3 2008/06/30 16:48:27 oxon Exp $
+// $Id: THealAlm.cxx,v 1.4 2008/07/03 22:31:45 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -105,7 +105,7 @@ void THealAlm<T>::SetToZero()
 template<typename T>
 std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m)
 {
-  if(0 <= l && l <= fLmax && -fMmax <= m && m <= fMmax){
+  if(0 <= l && l <= fLmax && 0 <= m && m <= l){
     return fAlm[((m*(fTval - m))>>1) + l];
   } // if
 
@@ -117,7 +117,7 @@ std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m)
 template<typename T>
 const std::complex<T>& THealAlm<T>::operator()(Int_t l, Int_t m) const
 {
-  if(0 <= l && l <= fLmax && -fMmax <= m && m <= fMmax){
+  if(0 <= l && l <= fLmax && 0 <= m && m <= l){
     return fAlm[((m*(fTval - m))>>1) + l];
   } // if
 
