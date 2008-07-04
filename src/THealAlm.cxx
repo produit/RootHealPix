@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.5 2008/07/04 22:11:33 oxon Exp $
+// $Id: THealAlm.cxx,v 1.6 2008/07/04 23:06:09 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -323,3 +323,15 @@ THealAlm<T> operator/(const THealAlm<T>& ha1, const THealAlm<T>& ha2)
 
 template class THealAlm<Float_t>;
 template class THealAlm<Double_t>;
+template THealAlm<Float_t> operator*<Float_t>(Double_t c1, const THealAlm<Float_t>& ha1);
+template THealAlm<Double_t> operator*<Double_t>(Double_t c1, const THealAlm<Double_t>& ha1);
+template THealAlm<Float_t> operator*<Float_t>(const THealAlm<Float_t>& ha1, Double_t c1);
+template THealAlm<Double_t> operator*<Double_t>(const THealAlm<Double_t>& ha1, Double_t c1);
+template THealAlm<Float_t> operator+<Float_t>(const THealAlm<Float_t>& ha1, const THealAlm<Float_t>& ha2);
+template THealAlm<Double_t> operator+<Double_t>(const THealAlm<Double_t>& ha1, const THealAlm<Double_t>& ha2);
+template THealAlm<Float_t> operator-<Float_t>(const THealAlm<Float_t>& ha1, const THealAlm<Float_t>& ha2);
+template THealAlm<Double_t> operator-<Double_t>(const THealAlm<Double_t>& ha1, const THealAlm<Double_t>& ha2);
+template THealAlm<Float_t> operator*<Float_t>(const THealAlm<Float_t>& ha1, const THealAlm<Float_t>& ha2);
+template THealAlm<Double_t> operator*<Double_t>(const THealAlm<Double_t>& ha1, const THealAlm<Double_t>& ha2);
+template THealAlm<Float_t> operator/<Float_t>(const THealAlm<Float_t>& ha1, const THealAlm<Float_t>& ha2);
+template THealAlm<Double_t> operator/<Double_t>(const THealAlm<Double_t>& ha1, const THealAlm<Double_t>& ha2);
