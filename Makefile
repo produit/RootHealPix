@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 2008/06/30 20:17:16 oxon Exp $
+# $Id: Makefile,v 1.5 2008/07/04 22:11:19 oxon Exp $
 # Author: Akira Okumura 2008/06/20
 
 ###############################################################################
@@ -94,7 +94,7 @@ doc:	all htmldoc
 htmldoc:
 	sh mkhtml.sh
 
-test:	
+test:	all
 	@for script in $(UNITTEST);\
 	do \
 	echo "Executing" $$script "...";\
