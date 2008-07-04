@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.10 2008/07/04 01:35:53 oxon Exp $
+// $Id: LinkDef.h,v 1.11 2008/07/04 22:10:19 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -12,11 +12,8 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class std::complex<Double_t>;
-#pragma link C++ class std::complex<Float_t>;
-
-#pragma link C++ class THealAlm<Double_t>;
-#pragma link C++ class THealAlm<Float_t>;
+#pragma link C++ class THealAlm<Double_t>-;
+#pragma link C++ class THealAlm<Float_t>-;
 
 #pragma link C++ function operator*(Double_t, THealAlm<Float_t>&);
 #pragma link C++ function operator*(Double_t, THealAlm<Double_t>&);
