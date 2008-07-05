@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.18 2008/07/05 22:50:44 oxon Exp $
+// $Id: THealPix.h,v 1.19 2008/07/05 22:52:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -40,10 +40,10 @@ protected:
 
 protected:
   Int_t         fOrder;         //Order of resolution
-  Int_t         fNside;         //= 2^fOrder
-  Int_t         fNpix;          //= 12*fNside^2
-  Int_t         fNpFace;        //= fNside*fNside (used for faster calculation)
-  Int_t         fNcap;          //= fNpFace*fNside (used for faster calculation)
+  Int_t         fNside;         //!= 2^fOrder
+  Int_t         fNpix;          //!= 12*fNside^2
+  Int_t         fNpFace;        //!= fNside*fNside (used for faster calculation)
+  Int_t         fNcap;          //!= fNpFace*fNside (used for faster calculation)
   Bool_t        fIsDegree;      //deg = true, rad = false
   Bool_t        fIsNested;      //RING = false, NESTED = true
   std::string   fUnit;          //Unit of data (used in FITS header)
