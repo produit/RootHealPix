@@ -1,4 +1,4 @@
-// $Id: THealAlmMapTools.cxx,v 1.5 2008/07/05 22:49:42 oxon Exp $
+// $Id: THealAlmMapTools.cxx,v 1.6 2008/07/05 23:24:34 oxon Exp $
 
 #include <cmath>
 
@@ -237,7 +237,6 @@ template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, Bool_t 
   for(Int_t i = 0; i < chunksize; i++){
     phas_n[i] = new std::complex<double>[mmax+1];
     phas_s[i] = new std::complex<double>[mmax+1];
-    std::cout << i << std::endl;
   } // i
 
   std::vector<double> cth(chunksize), sth(chunksize);
