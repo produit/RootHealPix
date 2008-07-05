@@ -1,4 +1,4 @@
-// $Id: THealAlmMapTools.cxx,v 1.4 2008/07/03 09:36:17 oxon Exp $
+// $Id: THealAlmMapTools.cxx,v 1.5 2008/07/05 22:49:42 oxon Exp $
 
 #include <cmath>
 
@@ -120,7 +120,11 @@ template<typename T> void Alm2Map(const THealAlm<T>& alm, THealPix& map)
   int nchunks, chunksize;
   get_chunk_info(2*nside,nchunks,chunksize);
 
-  std::complex<double> b_north[chunksize][mmax+1], b_south[chunksize][mmax+1];
+  std::complex<double> *b_north[chunksize], *b_south[chunksize];
+  for(Int_t i = 0; i < chunksize; i++){
+    b_north[i] = new std::complex<double>[mmax+1];
+    b_south[i] = new std::complex<double>[mmax+1];
+  } // i
   std::vector<double> cth(chunksize),sth(chunksize);
 
   for (int chunk=0; chunk<nchunks; ++chunk)
@@ -198,6 +202,12 @@ end:      b_north[ith][m] = p1+p2; b_south[ith][m] = p1-p2;
 
 } // end of parallel region
     }
+
+  for(Int_t i = 0; i < chunksize; i++){
+    delete b_north[i];
+    delete b_south[i];
+  } // i
+
   }
 
 template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, Bool_t add_alm)
@@ -223,7 +233,13 @@ template<typename T> void Map2Alm(const THealPix& map, THealAlm<T>& alm, Bool_t 
   int nchunks, chunksize;
   get_chunk_info(2*nside,nchunks,chunksize);
 
-  std::complex<double> phas_n[chunksize][mmax+1], phas_s[chunksize][mmax+1];
+  std::complex<double> *phas_n[chunksize], *phas_s[chunksize];
+  for(Int_t i = 0; i < chunksize; i++){
+    phas_n[i] = new std::complex<double>[mmax+1];
+    phas_s[i] = new std::complex<double>[mmax+1];
+    std::cout << i << std::endl;
+  } // i
+
   std::vector<double> cth(chunksize), sth(chunksize);
   double normfact = TMath::Pi()/(3*nside*nside);
 
@@ -295,6 +311,12 @@ end:      ;
       }
 } // end of parallel region
     }
+
+  for(Int_t i = 0; i < chunksize; i++){
+    delete phas_n[i];
+    delete phas_s[i];
+  } // i
+
   }
 
   template void Alm2Map(const THealAlm<Float_t>& alm, THealPix& map);
