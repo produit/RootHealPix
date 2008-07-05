@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.19 2008/07/03 21:48:37 oxon Exp $
+// $Id: THealPix.cxx,v 1.20 2008/07/05 22:50:45 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1125,6 +1125,30 @@ void THealPix::SetDirectory(TDirectory *dir)
   } // if
 }
 
+//______________________________________________________________________________
+void THealPix::SetName(const char* name)
+{
+  if(fDirectory){
+    fDirectory->Remove(this);
+  } // if
+  fName = name;
+  if(fDirectory){
+    fDirectory->Append(this);
+  } // if
+}
+
+//______________________________________________________________________________
+void THealPix::SetNameTitle(const char* name, const char* title)
+{
+  if(fDirectory){
+    fDirectory->Remove(this);
+  } // if
+  fName  = name;
+  SetTitle(title);
+  if(fDirectory){
+    fDirectory->Append(this);
+  } // if
+}
 //_____________________________________________________________________________
 void THealPix::Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
 {
