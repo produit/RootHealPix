@@ -1,9 +1,12 @@
-// $Id: THealPix.cxx,v 1.21 2008/07/07 06:13:07 oxon Exp $
+// $Id: THealPix.cxx,v 1.22 2008/07/07 07:19:05 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
    Copyright (C) 2008-, Akira Okumura
    All rights reserved.
+
+   This is a port of HEALPix C++ package to ROOT system.
+   Original code is available at <http://healpix.jpl.nasa.gov> under GPL.
 ******************************************************************************/
 
 #include <cstring>

@@ -1,5 +1,24 @@
+// $Id: THealFFT.h,v 1.3 2008/07/07 07:19:05 oxon Exp $
+// Author: Akira Okumura 2008/6/27
+
+/*****************************************************************************
+   Copyright (C) 2008-, Akira Okumura
+   All rights reserved.
+
+   This is a port of HEALPix C++ package to ROOT system.
+   Original code is available at <http://healpix.jpl.nasa.gov> under GPL.
+******************************************************************************/
+
 #ifndef T_HEAL_FFT_H
 #define T_HEAL_FFT_H
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// THealFFT                                                             //
+//                                                                      //
+// Encapsulate the FFT library in HEALPix C++ package.                  //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 #include <cmath>
 #include <complex>

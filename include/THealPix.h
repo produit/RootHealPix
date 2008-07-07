@@ -1,13 +1,24 @@
-// $Id: THealPix.h,v 1.20 2008/07/07 06:13:06 oxon Exp $
+// $Id: THealPix.h,v 1.21 2008/07/07 07:19:05 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
    Copyright (C) 2008-, Akira Okumura
    All rights reserved.
+
+   This is a port of HEALPix C++ package to ROOT system.
+   Original code is available at <http://healpix.jpl.nasa.gov> under GPL.
 ******************************************************************************/
 
 #ifndef T_HEAL_PIX
 #define T_HEAL_PIX
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// THealPix                                                             //
+//                                                                      //
+// HEALPix-like 2D histogram base class.                                //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 #include <string>
 
@@ -148,7 +159,7 @@ public:
   ClassDef(THealPix, 1);
 };
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 class THealPixF : public THealPix, public TArrayF {
 public:
   THealPixF();
@@ -194,7 +205,7 @@ THealPixF operator-(const THealPixF &hp1, const THealPixF &hp2);
 THealPixF operator*(const THealPixF &hp1, const THealPixF &hp2);
 THealPixF operator/(const THealPixF &hp1, const THealPixF &hp2);
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 class THealPixD : public THealPix, public TArrayD {
 public:
   THealPixD();

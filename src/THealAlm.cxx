@@ -1,9 +1,12 @@
-// $Id: THealAlm.cxx,v 1.6 2008/07/04 23:06:09 oxon Exp $
+// $Id: THealAlm.cxx,v 1.7 2008/07/07 07:19:05 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
    Copyright (C) 2008-, Akira Okumura
    All rights reserved.
+
+   This is a port of HEALPix C++ package to ROOT system.
+   Original code is available at <http://healpix.jpl.nasa.gov> under GPL.
 ******************************************************************************/
 
 #include "TMath.h"
