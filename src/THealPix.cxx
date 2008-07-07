@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.20 2008/07/05 22:50:45 oxon Exp $
+// $Id: THealPix.cxx,v 1.21 2008/07/07 06:13:07 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -529,6 +529,17 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
     
     return ipf + (face_num << (2*fOrder));    // in {0, 12*fNside**2 - 1}
   } // if
+}
+
+//______________________________________________________________________________
+Double_t THealPix::GetAverage() const
+{
+  Double_t total = 0;
+  for(Int_t i = 0; i < fNpix; i++){
+    total += GetBinContent(i);
+  } // i
+  
+  return total/fNpix;
 }
 
 //______________________________________________________________________________

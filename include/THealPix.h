@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.19 2008/07/05 22:52:10 oxon Exp $
+// $Id: THealPix.h,v 1.20 2008/07/07 06:13:06 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -97,6 +97,7 @@ public:
   virtual Int_t    Fill(const Float_t* x);
   virtual Int_t    Fill(const Float_t* x, Double_t w);
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
+  virtual Double_t GetAverage() const;
   virtual void     GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const;
   virtual void     GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
