@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.23 2008/07/08 07:40:47 oxon Exp $
+// $Id: THealPix.cxx,v 1.24 2008/07/08 16:44:15 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -18,10 +18,12 @@
 #include "TMath.h"
 #include "TPad.h"
 #include "TROOT.h"
+#include "TStyle.h"
 #include "TVector3.h"
 
 #include "THealPix.h"
 #include "THealUtil.h"
+#include "TVirtualHealPainter.h"
 
 Bool_t THealPix::fgAddDirectory = kTRUE;
 Bool_t THealPix::fgDefaultSumw2 = kFALSE;
@@ -267,6 +269,7 @@ void THealPix::Copy(TObject& obj) const
   ((THealPix&)obj).fUnit     = fUnit;
   ((THealPix&)obj).fTsumw    = fTsumw;
   ((THealPix&)obj).fTsumw2   = fTsumw2;
+  ((THealPix&)obj).fOption   = fOption;
 
   TArray* a = dynamic_cast<TArray*>(&obj);
   if(a){
@@ -740,9 +743,18 @@ void THealPix::Multiply(const THealPix* hp1)
 }
 
 //_____________________________________________________________________________
-void THealPix::Paint(Option_t* /*option*/)
+void THealPix::Paint(Option_t* option)
 {
-  // Not implemented yet
+  // Control routine to paint any kind of HEALPixs
+  GetPainter(option);
+
+  if(fPainter){
+    if(strlen(option) > 0){
+      fPainter->Paint(option);
+    } else {
+      fPainter->Paint(fOption.Data());
+    } // if
+  } // if
 }
 
 //_____________________________________________________________________________
@@ -1089,6 +1101,26 @@ Int_t THealPix::GetMinimumBin() const
 Int_t THealPix::GetNrows() const
 {
   return fOrder < 4 ? 1 : 1024;
+}
+
+//_____________________________________________________________________________
+TVirtualHealPainter* THealPix::GetPainter(Option_t* option)
+{
+  // return pointer to patiner
+  // if painter does not exist, it is created
+  if(!fPainter){
+    TString opt = option;
+    opt.ToLower();
+    if(opt.Contains("gl") || gStyle->GetCanvasPreferGL()){
+      fPainter = 0; // to be modified
+    } // if
+  } // if
+
+  if(!fPainter){
+    fPainter = TVirtualHealPainter::HealPainter(this);
+  } // if
+
+  return fPainter;
 }
 
 //_____________________________________________________________________________

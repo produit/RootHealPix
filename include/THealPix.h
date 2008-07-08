@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.22 2008/07/08 07:40:48 oxon Exp $
+// $Id: THealPix.h,v 1.23 2008/07/08 16:44:14 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -29,6 +29,7 @@
 #include <fitsio.h>
 
 class TDirectory;
+class TVirtualHealPainter;
 
 class THealPix : public TNamed {
 protected:
@@ -62,7 +63,9 @@ protected:
   Double_t      fTsumw;         //Total Sum of weights
   Double_t      fTsumw2;        //Total Sum of squares of weights
   TArrayD       fSumw2;         //Total Sum of squares of weights
+  TString       fOption;        //histogram options
   TDirectory*   fDirectory;     //!Pointer to directory holding this HEALPixxs
+  TVirtualHealPainter* fPainter;//!pointer to HEALPix painter
   static Bool_t fgAddDirectory; //!flag to add HEALPixs to the directory
   static Bool_t fgDefaultSumw2; //!flag to call THealPix::Sumw2 automatically at histogram creation time
   static THealTable fgTable;    //!ctab and utab holder
@@ -121,7 +124,9 @@ public:
   virtual Int_t    GetNside() const { return fNside;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
+  Option_t*        GetOption() const {return fOption.Data();}
   virtual Int_t    GetOrder() const { return fOrder;}
+  TVirtualHealPainter* GetPainter(Option_t* option = "");
   virtual Double_t GetPixelArea(Bool_t degree2 = kFALSE) const;
   virtual std::string GetSchemeString() const;
   virtual TArrayD* GetSumw2() {return &fSumw2;}
@@ -146,6 +151,7 @@ public:
   virtual void     SetEntries(Double_t n) {fEntries = n;}
   virtual void     SetName(const char* name);
   virtual void     SetNameTitle(const char* name, const char* title);
+  virtual void     SetOption(Option_t* option = "") {fOption = option;}
   virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
   virtual void     Sumw2();
