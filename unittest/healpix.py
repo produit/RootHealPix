@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# $Id: healpix.py,v 1.5 2008/07/03 07:56:55 oxon Exp $
+# $Id: healpix.py,v 1.6 2008/07/08 07:41:15 oxon Exp $
 # Author: Akira Okumura 2008/06/25
 
 import unittest
@@ -56,6 +56,9 @@ class TestHealPix(unittest.TestCase):
             self.assertEqual(hpd.GetBinContent(i), i)
 
         self.assertEqual(hpd.GetEntries(), 12)
+
+        self.assertEqual(hpd.GetMaximumBin(), 11)
+        self.assertEqual(hpd.GetMinimumBin(), 0)
 
     def testRebin(self):
         """
