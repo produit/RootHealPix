@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.21 2008/07/07 07:19:05 oxon Exp $
+// $Id: THealPix.h,v 1.22 2008/07/08 07:40:48 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -116,6 +116,8 @@ public:
   TDirectory*      GetDirectory() const {return fDirectory;}
   static  Bool_t   GetDefaultSumw2();
   virtual Double_t GetEntries() const;
+  virtual Int_t    GetMaximumBin() const;
+  virtual Int_t    GetMinimumBin() const;
   virtual Int_t    GetNside() const { return fNside;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;

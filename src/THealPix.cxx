@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.22 2008/07/07 07:19:05 oxon Exp $
+// $Id: THealPix.cxx,v 1.23 2008/07/08 07:40:47 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1051,6 +1051,38 @@ Double_t THealPix::GetBinError(Int_t bin) const
   } // if
   Double_t error2 = TMath::Abs(GetBinContent(bin));
   return TMath::Sqrt(error2);
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::GetMaximumBin() const
+{
+  Int_t bin = 0;
+  Double_t maximum = -FLT_MAX;
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t value = GetBinContent(i);
+    if(value > maximum){
+      maximum = value;
+      bin = i;
+    } // if
+  } // i
+
+  return bin;
+}
+
+//_____________________________________________________________________________
+Int_t THealPix::GetMinimumBin() const
+{
+  Int_t bin = 0;
+  Double_t minimum = FLT_MAX;
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t value = GetBinContent(i);
+    if(value < minimum){
+      minimum = value;
+      bin = i;
+    } // if
+  } // i
+
+  return bin;
 }
 
 //_____________________________________________________________________________
