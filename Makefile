@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2008/07/04 22:11:19 oxon Exp $
+# $Id: Makefile,v 1.6 2008/07/08 18:47:40 oxon Exp $
 # Author: Akira Okumura 2008/06/20
 
 ###############################################################################
@@ -47,17 +47,11 @@ all:		$(RMAP)
 $(LIB):		$(OBJS)
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
-		echo $(LDFLAGS)
-		echo $(SOFLAGS)
-		echo $(EXTLIBS)
 		$(LD) $(SOFLAGS) $(EXTLIBS) $^ $(OutPutOpt) $@
 ifneq ($(subst $(MACOSX_MINOR),,1234),1234)
 ifeq ($(MACOSX_MINOR),4)
 		ln -sf $@ $(LIB_SYMBOLIC)
 else
-		echo $(LDFLAGS)
-		echo $(SOFLAGS)
-		echo $(EXTLIBS)
 		$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $(EXTLIBS) $^ \
 		$(OutPutOpt) $(subst .$(DllSuf),.so,$@)
 endif
