@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.24 2008/07/08 16:44:15 oxon Exp $
+// $Id: THealPix.cxx,v 1.25 2008/07/09 11:50:11 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -14,7 +14,7 @@
 #include "fitsio.h"
 
 #include "TDirectory.h"
-#include "TH1.h"
+#include "THashList.h"
 #include "TMath.h"
 #include "TPad.h"
 #include "TROOT.h"
@@ -44,16 +44,27 @@ THealPix::THealTable::THealTable()
 ClassImp(THealPix)
 
 //_____________________________________________________________________________
-THealPix::THealPix()
-: TNamed(),
-  fIsNested(kFALSE),
-  fUnit(""),
-  fEntries(0),
-  fTsumw(0),		 
-  fTsumw2(0),						 
-  fDirectory(0)
+THealPix::THealPix() : TNamed(), TAttLine(), TAttFill(), TAttMarker()
 {
   SetOrder(0);
+  fDirectory = 0;
+  fFunctions = new TList;
+  fPainter   = 0;
+  fEntries   = 0;
+  fNormFactor= 0;
+  fTsumw     = fTsumw2 = 0;
+  fMaximum   = -1111;
+  fMinimum   = -1111;
+  fUnit      = "";
+  fIsDegree  = kFALSE;
+  fIsNested  = kFALSE;
+  fXaxis.SetName("xaxis");
+  fYaxis.SetName("yaxis");
+  fZaxis.SetName("zaxis");
+  fXaxis.SetParent(this);
+  fYaxis.SetParent(this);
+  fZaxis.SetParent(this);
+  UseCurrentStyle();
 }
 
 //_____________________________________________________________________________
@@ -63,17 +74,44 @@ THealPix::~THealPix()
     return;
   } // if
 
+  if(fFunctions){
+    fFunctions->SetBit(kInvalidObject);
+    TObject* obj = 0;
+    //special logic to support the case where the same object is
+    //added multiple times in fFunctions.
+    //This case happens when the same object is added with different
+    //drawing modes
+    //In the loop below we must be careful with objects (eg TCutG) that may
+    // have been added to the list of functions of several histograms
+    //and may have been already deleted.
+    while((obj = fFunctions->First())){
+      while(fFunctions->Remove(obj)){ }
+      if(!obj->TestBit(kNotDeleted)){
+	break;
+      } // if
+      delete obj;
+      obj = 0;
+    } // while
+    delete fFunctions;
+    fFunctions = 0;
+  } // if
+
   if(fDirectory){
     fDirectory->Remove(this);
     fDirectory = 0;
   } // if
+
+  delete fPainter;
+  fPainter = 0;
 }
 
 //_____________________________________________________________________________
 THealPix::THealPix(const char* name, const char* title, Int_t order,
 		   Bool_t isNested)
-  : TNamed(name, title), fIsNested(isNested), fUnit("")
+  : TNamed(name, title), TAttLine(), TAttFill(), TAttMarker()
 {
+  fIsNested = isNested;
+  fUnit     = "";
   Build();
 
   if(order < 0)  order = 0;
@@ -86,7 +124,7 @@ THealPix::THealPix(const char* name, const char* title, Int_t order,
 }
 
 //_____________________________________________________________________________
-THealPix::THealPix(const THealPix& hp) : TNamed()
+THealPix::THealPix(const THealPix& hp) : TNamed(), TAttLine(), TAttFill(), TAttMarker()
 {
   ((THealPix&)hp).Copy(*this);
 }
@@ -120,7 +158,9 @@ void THealPix::Add(const THealPix* hp1, Double_t c1)
   fEntries += c1*hp1->GetEntries();
  
   Double_t factor = 1;
-  //if (hp1->GetNormFactor() != 0) factor = hp1->GetNormFactor()/hp1->GetSumOfWeights();;
+  if(hp1->GetNormFactor() != 0){
+    factor = hp1->GetNormFactor()/hp1->GetSumOfWeights();;
+  } // if
   for(Int_t bin = 0; bin < fNpix; bin++){
     //special case where histograms have the kIsAverage bit set
     if(this->TestBit(kIsAverage) && hp1->TestBit(kIsAverage)){
@@ -233,13 +273,32 @@ Bool_t THealPix::AddDirectoryStatus()
 //_____________________________________________________________________________
 void THealPix::Build()
 {
+  fDirectory  = 0;
+  fPainter    = 0;
   fEntries    = 0;
+  fNormFactor = 0;
+  fIsDegree   = kFALSE;
   fTsumw      = 0;
   fTsumw2     = 0;
-  fDirectory  = 0;
+  fMaximum    = -1111;
+  fMinimum    = -1111;
+  fUnit       = "";
+  fXaxis.SetName("xaxis");
+  fYaxis.SetName("yaxis");
+  fZaxis.SetName("zaxis");
+  fXaxis.Set(1, 0., TMath::TwoPi());
+  fYaxis.Set(1, 0., TMath::Pi());
+  fZaxis.Set(1, 0., 1.);
+  fXaxis.SetParent(this);
+  fYaxis.SetParent(this);
+  fZaxis.SetParent(this);
 
   SetTitle(fTitle.Data());
   
+  fFunctions = new TList;
+
+  UseCurrentStyle();
+
   if(THealPix::AddDirectoryStatus()){
     fDirectory = gDirectory;
     if(fDirectory){
@@ -259,17 +318,22 @@ void THealPix::Copy(TObject& obj) const
     ((THealPix&)obj).fDirectory = 0;
   } // if
   TNamed::Copy(obj);
-  ((THealPix&)obj).fOrder    = fOrder;
-  ((THealPix&)obj).fNside    = fNside;
-  ((THealPix&)obj).fNpix     = fNpix;
-  ((THealPix&)obj).fNpFace   = fNpFace;
-  ((THealPix&)obj).fNcap     = fNcap;
-  ((THealPix&)obj).fIsDegree = fIsDegree;
-  ((THealPix&)obj).fIsNested = fIsNested;
-  ((THealPix&)obj).fUnit     = fUnit;
-  ((THealPix&)obj).fTsumw    = fTsumw;
-  ((THealPix&)obj).fTsumw2   = fTsumw2;
-  ((THealPix&)obj).fOption   = fOption;
+  ((THealPix&)obj).fNormFactor= fNormFactor;
+  ((THealPix&)obj).fBarOffset = fBarOffset;
+  ((THealPix&)obj).fBarWidth  = fBarWidth;
+  ((THealPix&)obj).fOrder     = fOrder;
+  ((THealPix&)obj).fNside     = fNside;
+  ((THealPix&)obj).fNpix      = fNpix;
+  ((THealPix&)obj).fNpFace    = fNpFace;
+  ((THealPix&)obj).fNcap      = fNcap;
+  ((THealPix&)obj).fIsDegree  = fIsDegree;
+  ((THealPix&)obj).fIsNested  = fIsNested;
+  ((THealPix&)obj).fUnit      = fUnit;
+  ((THealPix&)obj).fTsumw     = fTsumw;
+  ((THealPix&)obj).fTsumw2    = fTsumw2;
+  ((THealPix&)obj).fMaximum   = fMaximum;
+  ((THealPix&)obj).fMinimum   = fMinimum;
+  ((THealPix&)obj).fOption    = fOption;
 
   TArray* a = dynamic_cast<TArray*>(&obj);
   if(a){
@@ -279,7 +343,17 @@ void THealPix::Copy(TObject& obj) const
     ((THealPix&)obj).SetBinContent(i, this->GetBinContent(i));
   } // i
   ((THealPix&)obj).fEntries  = fEntries;
-
+  
+  TAttLine::Copy(((THealPix&)obj));
+  TAttFill::Copy(((THealPix&)obj));
+  TAttMarker::Copy(((THealPix&)obj));
+  fXaxis.Copy(((THealPix&)obj).fXaxis);
+  fYaxis.Copy(((THealPix&)obj).fYaxis);
+  fZaxis.Copy(((THealPix&)obj).fZaxis);
+  ((THealPix&)obj).fXaxis.SetParent(&obj);
+  ((THealPix&)obj).fYaxis.SetParent(&obj);
+  ((THealPix&)obj).fZaxis.SetParent(&obj);
+  fContour.Copy(((THealPix&)obj).fContour);
   fSumw2.Copy(((THealPix&)obj).fSumw2);
 
   if(fgAddDirectory && gDirectory){
@@ -548,6 +622,17 @@ Double_t THealPix::GetAverage() const
   return total/fNpix;
 }
 
+//_____________________________________________________________________________
+Double_t THealPix::GetBinArea(Bool_t degree2) const
+{
+  Double_t area = TMath::Pi()*4/fNpix;
+  if(degree2){
+    area *= TMath::RadToDeg()*TMath::RadToDeg();
+  } // if
+
+  return area;
+}
+
 //______________________________________________________________________________
 void THealPix::GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const
 {
@@ -689,6 +774,18 @@ void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
   } // if
 }
 
+//______________________________________________________________________________
+Double_t THealPix::GetSumOfWeights() const
+{
+  //   -*-*-*-*-*-*Return the sum of weights excluding under/overflows*-*-*-*-*
+  //               ===================================================
+  Double_t sum =0;
+  for(Int_t i = 0; i <= fNpix; i++) {
+    sum += GetBinContent(i);
+  } // i
+  return sum;
+}
+
 //_____________________________________________________________________________
 void THealPix::Draw(Option_t* option)
 {
@@ -698,8 +795,25 @@ void THealPix::Draw(Option_t* option)
     if(!gPad->IsEditable()){
       gROOT->MakeDefCanvas();
     } // if
-  } // if
-
+    if(opt.Contains("same")){
+      if(gPad->GetX1() == 0 && gPad->GetX2() == 1 &&
+	 gPad->GetY1() == 0 && gPad->GetY2() == 1 &&
+	 gPad->GetListOfPrimitives()->GetSize() == 0){
+	opt.ReplaceAll("same", "");
+      } // if
+    } else {
+      //the following statement is necessary in case one attempts to draw
+      //a temporary histogram already in the current pad
+      if(TestBit(kCanDelete)){
+	gPad->GetListOfPrimitives()->Remove(this);
+      } // if
+      gPad->Clear();
+    } // if
+  } else {
+    if(opt.Contains("same")){
+      opt.ReplaceAll("same", "");
+    } // if
+  }
   AppendPad(option);
 }
 
@@ -1039,6 +1153,48 @@ void THealPix::Sumw2()
 }
 
 //______________________________________________________________________________
+void THealPix::UseCurrentStyle()
+{
+  if(gStyle->IsReading()) {
+    fXaxis.ResetAttAxis("X");
+    fYaxis.ResetAttAxis("Y");
+    fZaxis.ResetAttAxis("Z");
+    SetBarOffset(gStyle->GetBarOffset());
+    SetBarWidth(gStyle->GetBarWidth());
+    SetFillColor(gStyle->GetHistFillColor());
+    SetFillStyle(gStyle->GetHistFillStyle());
+    SetLineColor(gStyle->GetHistLineColor());
+    SetLineStyle(gStyle->GetHistLineStyle());
+    SetLineWidth(gStyle->GetHistLineWidth());
+    SetMarkerColor(gStyle->GetMarkerColor());
+    SetMarkerStyle(gStyle->GetMarkerStyle());
+    SetMarkerSize(gStyle->GetMarkerSize());
+    Int_t dostat = gStyle->GetOptStat();
+    if (gStyle->GetOptFit() && !dostat) dostat = 1000000001;
+    //    SetStats(dostat);
+  } else {
+    gStyle->SetBarOffset(fBarOffset);
+    gStyle->SetBarWidth(fBarWidth);
+    gStyle->SetHistFillColor(GetFillColor());
+    gStyle->SetHistFillStyle(GetFillStyle());
+    gStyle->SetHistLineColor(GetLineColor());
+    gStyle->SetHistLineStyle(GetLineStyle());
+    gStyle->SetHistLineWidth(GetLineWidth());
+    gStyle->SetMarkerColor(GetMarkerColor());
+    gStyle->SetMarkerStyle(GetMarkerStyle());
+    gStyle->SetMarkerSize(GetMarkerSize());
+    gStyle->SetOptStat(TestBit(kNoStats));
+  } // if
+
+  TIter next(GetListOfFunctions());
+  TObject* obj;
+  
+  while((obj = next())){
+    obj->UseCurrentStyle();
+  } // while
+}
+
+//______________________________________________________________________________
 Double_t THealPix::GetBinError(Int_t bin) const
 {
   //   -*-*-*-*-*Return value of error associated to bin number bin*-*-*-*-*
@@ -1065,6 +1221,79 @@ Double_t THealPix::GetBinError(Int_t bin) const
   return TMath::Sqrt(error2);
 }
 
+//______________________________________________________________________________
+Int_t THealPix::GetContour(Double_t* levels)
+{
+  //  Return contour values into array levels if pointer levels is non zero
+  //
+  //  The function returns the number of contour levels.
+  //  see GetContourLevel to return one contour only
+  //
+  
+  Int_t nlevels = fContour.fN;
+  if(levels){
+    if(nlevels == 0){
+      nlevels = 20;
+      SetContour(nlevels);
+    } else {
+      if(TestBit(kUserContour) == 0) SetContour(nlevels);
+    } // if
+    for(Int_t i = 0; i < nlevels; i++){
+      levels[i] = fContour.fArray[i];
+    } // i
+  } // if
+  return nlevels;
+}
+
+//______________________________________________________________________________
+Double_t THealPix::GetContourLevel(Int_t level) const
+{
+  // Return value of contour number level
+  // see GetContour to return the array of all contour levels
+  
+  if(level <0 || level >= fContour.fN) return 0;
+  Double_t zlevel = fContour.fArray[level];
+  return zlevel;
+}
+
+//______________________________________________________________________________
+Double_t THealPix::GetContourLevelPad(Int_t level) const
+{
+  // Return the value of contour number "level" in Pad coordinates ie: if the Pad
+  // is in log scale along Z it returns le log of the contour level value.
+  // see GetContour to return the array of all contour levels
+  
+  if(level <0 || level >= fContour.fN) return 0;
+  Double_t zlevel = fContour.fArray[level];
+  
+  // In case of user defined contours and Pad in log scale along Z,
+  // fContour.fArray doesn't contain the log of the contour whereas it does
+  // in case of equidistant contours.
+  if(gPad && gPad->GetLogz() && TestBit(kUserContour)){
+    if(zlevel <= 0) return 0;
+    zlevel = TMath::Log10(zlevel);
+  } // if
+  return zlevel;
+}
+
+//_____________________________________________________________________________
+Double_t THealPix::GetMaximum(Double_t maxval) const
+{
+  if(fMinimum != -1111){
+    return fMaximum;
+  } // if
+
+  Double_t maximum = -FLT_MAX;
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t value = GetBinContent(i);
+    if(value > maximum && value < maxval){
+      maximum = value;
+    } // if
+  } // i
+
+  return maximum;
+}
+
 //_____________________________________________________________________________
 Int_t THealPix::GetMaximumBin() const
 {
@@ -1079,6 +1308,24 @@ Int_t THealPix::GetMaximumBin() const
   } // i
 
   return bin;
+}
+
+//_____________________________________________________________________________
+Double_t THealPix::GetMinimum(Double_t minval) const
+{
+  if(fMinimum != -1111){
+    return fMinimum;
+  } // if
+
+  Double_t minimum = FLT_MAX;
+  for(Int_t i = 0; i < fNpix; i++){
+    Double_t value = GetBinContent(i);
+    if(value < minimum && value > minval){
+      minimum = value;
+    } // if
+  } // i
+
+  return minimum;
 }
 
 //_____________________________________________________________________________
@@ -1124,17 +1371,6 @@ TVirtualHealPainter* THealPix::GetPainter(Option_t* option)
 }
 
 //_____________________________________________________________________________
-Double_t THealPix::GetPixelArea(Bool_t degree2) const
-{
-  Double_t area = TMath::Pi()*4/fNpix;
-  if(degree2){
-    area *= TMath::RadToDeg()*TMath::RadToDeg();
-  } // if
-
-  return area;
-}
-
-//_____________________________________________________________________________
 std::string THealPix::GetSchemeString() const
 {
   if(fIsNested){
@@ -1142,6 +1378,30 @@ std::string THealPix::GetSchemeString() const
   } else {
     return "RING";
   } // if
+}
+
+//______________________________________________________________________________
+TAxis* THealPix::GetXaxis() const
+{
+  // return a pointer to the X axis object
+  
+  return &((THealPix*)this)->fXaxis;
+}
+
+//______________________________________________________________________________
+TAxis* THealPix::GetYaxis() const
+{
+  // return a pointer to the Y axis object
+  
+  return &((THealPix*)this)->fYaxis;
+}
+
+//______________________________________________________________________________
+TAxis* THealPix::GetZaxis() const
+{
+  // return a pointer to the Z axis object
+  
+  return &((THealPix*)this)->fZaxis;
 }
 
 //_____________________________________________________________________________
@@ -1156,6 +1416,14 @@ void THealPix::Scale(Double_t c1, Option_t* option)
     Add(this, this, c1, 0);
   } // if
   fEntries = ent;
+
+  //if contours set, must also scale contours
+  Int_t ncontours = GetContour();
+  if(ncontours == 0) return;
+  Double_t* levels = fContour.GetArray();
+  for(Int_t i = 0; i < ncontours; i++){
+    levels[i] *= c1;
+  } // i
 }
 
 //______________________________________________________________________________
@@ -1181,6 +1449,62 @@ void THealPix::SetBins(Int_t n)
 }
 
 //______________________________________________________________________________
+void THealPix::SetContour(Int_t  nlevels, const Double_t* levels)
+{
+  //   -*-*-*-*-*-*Set the number and values of contour levels*-*-*-*-*-*-*-*-*
+  //               ===========================================
+  //
+  //  By default the number of contour levels is set to 20.
+  //
+  //  if argument levels = 0 or missing, equidistant contours are computed
+  //
+  
+  ResetBit(kUserContour);
+  if(nlevels <= 0){
+    fContour.Set(0);
+    return;
+  } // if
+  fContour.Set(nlevels);
+  
+  //   -  Contour levels are specified
+  if(levels){
+    SetBit(kUserContour);
+    for(Int_t i=0; i < nlevels; i++){
+      fContour.fArray[i] = levels[i];
+    } // i
+  } else {
+    //   - contour levels are computed automatically as equidistant contours
+    Double_t zmin = GetMinimum();
+    Double_t zmax = GetMaximum();
+    if((zmin == zmax) && (zmin != 0)){
+      zmax += 0.01*TMath::Abs(zmax);
+      zmin -= 0.01*TMath::Abs(zmin);
+    } // if
+    Double_t dz = (zmax - zmin)/Double_t(nlevels);
+    if(gPad && gPad->GetLogz()){
+      if (zmax <= 0) return;
+      if (zmin <= 0) zmin = 0.001*zmax;
+      zmin = TMath::Log10(zmin);
+      zmax = TMath::Log10(zmax);
+      dz   = (zmax-zmin)/Double_t(nlevels);
+    } // if
+    for(Int_t i=0; i < nlevels; i++) {
+      fContour.fArray[i] = zmin + dz*Double_t(i);
+    } // i
+  } // if
+}
+
+//______________________________________________________________________________
+void THealPix::SetContourLevel(Int_t level, Double_t value)
+{
+  //   -*-*-*-*-*-*-*-*-*Set value for one contour level*-*-*-*-*-*-*-*-*-*-*-*
+  //                     ===============================
+  if(level <0 || level >= fContour.fN) return;
+  SetBit(kUserContour);
+  fContour.fArray[level] = value;
+}
+
+//______________________________________________________________________________
 void THealPix::SetDirectory(TDirectory *dir)
 {
   // By default when a HEALPix is created, it is added to the list
@@ -1201,6 +1525,18 @@ void THealPix::SetDirectory(TDirectory *dir)
   if(fDirectory){
     fDirectory->Append(this);
   } // if
+}
+
+//______________________________________________________________________________
+void THealPix::SetMaximum(Double_t maximum)
+{
+  fMaximum = maximum;
+}
+
+//______________________________________________________________________________
+void THealPix::SetMinimum(Double_t minimum)
+{
+  fMinimum = minimum;
 }
 
 //______________________________________________________________________________

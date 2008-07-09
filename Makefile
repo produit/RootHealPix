@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.7 2008/07/08 18:55:31 oxon Exp $
+# $Id: Makefile,v 1.8 2008/07/09 11:50:09 oxon Exp $
 # Author: Akira Okumura 2008/06/20
 
 ###############################################################################
@@ -9,7 +9,7 @@
 include $(ROOTSYS)/test/Makefile.arch
 
 NAME	:=	RootHealPix
-DEPEND	:=	libHist libPhysics
+DEPEND	:=	libGraf libHist libPhysics
 
 SRCDIR	:=	src
 INCDIR	:=	include

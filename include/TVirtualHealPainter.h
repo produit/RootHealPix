@@ -1,4 +1,4 @@
-// $Id: TVirtualHealPainter.h,v 1.1 2008/07/08 08:12:05 oxon Exp $
+// $Id: TVirtualHealPainter.h,v 1.2 2008/07/09 11:50:10 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -19,6 +19,7 @@
 
 #include "TObject.h"
 
+class TF1;
 class TClass;
 class THealPix;
 
@@ -33,11 +34,14 @@ public:
   virtual Int_t  DistancetoPrimitive(Int_t px, Int_t py) = 0;
   virtual void   DrawPanel() = 0;
   virtual void   ExecuteEvent(Int_t event, Int_t px, Int_t py) = 0;
+  virtual TList* GetContourList(Double_t contour) const = 0;
   virtual Bool_t IsInside(Int_t x, Int_t y) = 0;
   virtual Bool_t IsInside(Double_t x, Double_t y) = 0;
   virtual void   Paint(Option_t* option = "") = 0;
+  virtual void   PaintStat(Int_t dostat, TF1* fit) = 0;
   virtual void   ProcessMessage(const char* mess, const TObject* obj) = 0;
   virtual void   SetHealPix(THealPix* hp) = 0;
+  virtual Int_t  MakeCuts(char* cutsopt) = 0;
 
   static TVirtualHealPainter* HealPainter(THealPix* obj);
   static void                 SetPainter(const char* painter);

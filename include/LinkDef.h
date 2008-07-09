@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.13 2008/07/08 16:43:00 oxon Exp $
+// $Id: LinkDef.h,v 1.14 2008/07/09 11:50:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -74,6 +74,7 @@ namespace THealUtil {
 #pragma link C++ function THealUtil::SaveToFits(const char*, const std::vector<THealPix*>&);
 
 #pragma link C++ class THealPainter+;
+#pragma link C++ class THealPaletteAxis+;
 #pragma link C++ class TVirtualHealPainter+;
 
 #endif

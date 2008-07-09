@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.23 2008/07/08 16:44:14 oxon Exp $
+// $Id: THealPix.h,v 1.24 2008/07/09 11:50:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -24,14 +24,19 @@
 
 #include "TArrayD.h"
 #include "TArrayF.h"
+#include "TAttFill.h"
+#include "TAttLine.h"
+#include "TAttMarker.h"
+#include "TAxis.h"
 #include "TNamed.h"
 
 #include <fitsio.h>
 
 class TDirectory;
+class TList;
 class TVirtualHealPainter;
 
-class THealPix : public TNamed {
+class THealPix : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 protected:
   class THealTable {
   private:
@@ -51,6 +56,12 @@ protected:
   };
 
 protected:
+  TAxis         fXaxis;         //X axis descriptor
+  TAxis         fYaxis;         //Y axis descriptor
+  TAxis         fZaxis;         //Z axis descriptor
+  TList*        fFunctions;     //->Pointer to list of functions (fits and user)
+  Short_t       fBarOffset;     //(1000*offset) for bar charts or legos
+  Short_t       fBarWidth;      //(1000*width) for bar charts or legos
   Int_t         fOrder;         //Order of resolution
   Int_t         fNside;         //!= 2^fOrder
   Int_t         fNpix;          //!= 12*fNside^2
@@ -60,6 +71,10 @@ protected:
   Bool_t        fIsNested;      //RING = false, NESTED = true
   std::string   fUnit;          //Unit of data (used in FITS header)
   Double_t      fEntries;       //Number of entries
+  Double_t      fMaximum;       //Maximum value for plotting
+  Double_t      fMinimum;       //Minimum value for plotting
+  Double_t      fNormFactor;    //Normalization factor
+  TArrayD       fContour;       //Array to display contour levels
   Double_t      fTsumw;         //Total Sum of weights
   Double_t      fTsumw2;        //Total Sum of squares of weights
   TArrayD       fSumw2;         //Total Sum of squares of weights
@@ -89,8 +104,13 @@ protected:
 public:
   // THealPix status bits
   enum {
-    kCanRebin  = BIT(11), // can rebin axis
-    kIsAverage = BIT(18)  // Bin contents are average (used by Add)
+    kNoStats     = BIT(9),  // don't draw stats box
+    kUserContour = BIT(10), // user specified contour levels
+    kCanRebin    = BIT(11), // can rebin axis
+    kLogX        = BIT(15), // X-axis in log scale
+    kIsZoomed    = BIT(16), // bit set when zooming on Y axis
+    kNoTitle     = BIT(17), // don't draw the histogram title
+    kIsAverage   = BIT(18)  // Bin contents are average (used by Add)
   };
 
   THealPix(const THealPix&);
@@ -112,24 +132,39 @@ public:
   virtual Int_t    Fill(const Float_t* x, Double_t w);
   virtual Int_t    FindBin(Double_t theta, Double_t phi) const;
   virtual Double_t GetAverage() const;
+  virtual Float_t  GetBarOffset() const {return Float_t(0.001*Float_t(fBarOffset));}
+  virtual Float_t  GetBarWidth() const  {return Float_t(0.001*Float_t(fBarWidth));}
+  virtual Double_t GetBinArea(Bool_t degree2 = kFALSE) const;
   virtual void     GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const;
   virtual void     GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
   virtual Double_t GetBinError(Int_t bin) const;
+  virtual Int_t    GetContour(Double_t* levels = 0);
+  virtual Double_t GetContourLevel(Int_t level) const;
+  virtual Double_t GetContourLevelPad(Int_t level) const;
   TDirectory*      GetDirectory() const {return fDirectory;}
   static  Bool_t   GetDefaultSumw2();
   virtual Double_t GetEntries() const;
+  TList*           GetListOfFunctions() const {return fFunctions;}
+  virtual Double_t GetMaximum(Double_t maxval = FLT_MAX) const;
   virtual Int_t    GetMaximumBin() const;
+  virtual Int_t    GetMaximumStored() const {return fMaximum;}
+  virtual Double_t GetMinimum(Double_t minval = -FLT_MAX) const;
   virtual Int_t    GetMinimumBin() const;
+  virtual Int_t    GetMinimumStored() const {return fMinimum;}
   virtual Int_t    GetNside() const { return fNside;}
+  virtual Double_t GetNormFactor() const {return fNormFactor;}
   virtual Int_t    GetNpix() const { return fNpix;}
   virtual Int_t    GetNrows() const;
   Option_t*        GetOption() const {return fOption.Data();}
   virtual Int_t    GetOrder() const { return fOrder;}
   TVirtualHealPainter* GetPainter(Option_t* option = "");
-  virtual Double_t GetPixelArea(Bool_t degree2 = kFALSE) const;
   virtual std::string GetSchemeString() const;
+  virtual Double_t GetSumOfWeights() const;
   virtual TArrayD* GetSumw2() {return &fSumw2;}
+            TAxis* GetXaxis() const;
+            TAxis* GetYaxis() const;
+            TAxis* GetZaxis() const;
   virtual const TArrayD* GetSumw2() const {return &fSumw2;}
   virtual void     GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix, Double_t &costheta, Double_t& sintheta, Bool_t& shifted) const;
   virtual Int_t    GetSumw2N() const {return fSumw2.fN;}
@@ -141,20 +176,31 @@ public:
   virtual void     Paint(Option_t* option = "");
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
   virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
+  virtual void     SetBarOffset(Float_t offset = 0.25) {fBarOffset = Short_t(1000*offset);}
+  virtual void     SetBarWidth(Float_t width = 0.5) {fBarWidth = Short_t(1000*width);}
   virtual void     SetBinContent(Int_t bin, Double_t content);
   virtual void     SetBinError(Int_t bin, Double_t error);
   virtual void     SetBins(Int_t n);
   virtual void     SetBinsLength(Int_t = -1) {} // redefined in derived cplasses
+  virtual void     SetContour(Int_t nlevels, const Double_t* levels = 0);
+  virtual void     SetContourLevel(Int_t level, Double_t value);
   static  void     SetDefaultSumw2(Bool_t sumw2=kTRUE);
   virtual void     SetDegree(Bool_t isDegree = kTRUE) {fIsDegree = isDegree;}
   virtual void     SetDirectory(TDirectory *dir);
   virtual void     SetEntries(Double_t n) {fEntries = n;}
+  virtual void     SetMaximum(Double_t maximum = -1111);
+  virtual void     SetMinimum(Double_t minimum = -1111);
   virtual void     SetName(const char* name);
   virtual void     SetNameTitle(const char* name, const char* title);
+  virtual void     SetNormFactor(Double_t factor = 1) {fNormFactor = factor;}
   virtual void     SetOption(Option_t* option = "") {fOption = option;}
   virtual void     SetOrder(Int_t order);
   virtual void     SetUnit(const char* unit);
+  virtual void     SetXTitle(const char* title) {fXaxis.SetTitle(title);}
+  virtual void     SetYTitle(const char* title) {fYaxis.SetTitle(title);}
+  virtual void     SetZTitle(const char* title) {fZaxis.SetTitle(title);}
   virtual void     Sumw2();
+  void             UseCurrentStyle();
   virtual void     Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
   virtual Int_t    XYF2Nest(Int_t x, Int_t y, Int_t face) const;
   virtual void     Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const;
