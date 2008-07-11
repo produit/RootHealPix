@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.25 2008/07/11 11:02:23 oxon Exp $
+// $Id: THealPix.h,v 1.26 2008/07/11 21:32:39 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -215,6 +215,9 @@ public:
   virtual Int_t    Ring2Nest(Int_t pix) const;
   virtual void     Pix2XY(Int_t pix, Int_t& x, Int_t& y) const;
   virtual Int_t    XY2Pix(Int_t x, Int_t y) const;
+
+  static  Int_t    Nside2Npix(Int_t nside) {return 12*nside*nside;}
+  static  Int_t    Order2Nside(Int_t order) {return 1<<order;}
 
   ClassDef(THealPix, 1);
 };
