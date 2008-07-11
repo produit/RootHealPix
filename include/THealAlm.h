@@ -1,4 +1,4 @@
-// $Id: THealAlm.h,v 1.4 2008/07/07 07:19:05 oxon Exp $
+// $Id: THealAlm.h,v 1.5 2008/07/11 23:57:48 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -54,6 +54,7 @@ public:
   virtual ~THealAlm();
   virtual void  Add(const THealAlm<T>* ha1, Double_t c1 = 1);
   virtual void  Add(const THealAlm<T>* ha1, const THealAlm<T>* ha2, Double_t c1, Double_t c2);
+  virtual void  Alm2Map(THealPix& map) const;
   virtual Int_t GetLmax() const {return fLmax;}
   virtual Int_t GetMmax() const {return fMmax;}
   virtual std::complex<T>* GetMstart(Int_t m) {return &(fAlm[(m*(fTval - m))>>1]);}

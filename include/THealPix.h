@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.26 2008/07/11 21:32:39 oxon Exp $
+// $Id: THealPix.h,v 1.27 2008/07/11 23:57:48 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -21,6 +21,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <string>
+#include <vector>
 
 #include "TArrayD.h"
 #include "TArrayF.h"
@@ -33,6 +34,7 @@
 #include <fitsio.h>
 
 class TDirectory;
+template<typename T> class THealAlm;
 class TList;
 class TVirtualHealPainter;
 
@@ -178,6 +180,10 @@ public:
   virtual std::string GetUnit() const { return fUnit;}
   virtual Bool_t   IsDegree() const {return fIsDegree;}
   virtual Bool_t   IsNested() const {return fIsNested;}
+  template<typename T>
+          void     Map2Alm(THealAlm<T>& alm, Bool_t add = kFALSE) const;
+  template<typename T>
+          void     Map2Alm(THealAlm<T>& alm, const std::vector<double>& weight, Bool_t add = kFALSE) const;
   virtual void     Multiply(const THealPix* hp1);
   virtual void     Paint(Option_t* option = "");
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");

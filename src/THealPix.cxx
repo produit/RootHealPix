@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.27 2008/07/11 21:32:40 oxon Exp $
+// $Id: THealPix.cxx,v 1.28 2008/07/11 23:57:49 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -9,6 +9,7 @@
    Original code is available at <http://healpix.jpl.nasa.gov> under GPL.
 ******************************************************************************/
 
+#include <complex>
 #include <cstring>
 #include <iostream>
 #include "fitsio.h"
@@ -21,6 +22,7 @@
 #include "TStyle.h"
 #include "TVector3.h"
 
+#include "THealFFT.h"
 #include "THealPix.h"
 #include "THealUtil.h"
 #include "TVirtualHealPainter.h"
@@ -55,6 +57,113 @@ namespace {
     // Calculate modulo of two long integers
     // Original code is modulo of HEALPix C++
     return (v1 >= 0) ? ((v1 < v2) ? v1 : (v1%v2)) : ((v1%v2) + v2);
+  }
+
+//______________________________________________________________________________
+  void get_chunk_info (int nrings, int &nchunks, int &chunksize)
+  {
+    nchunks = nrings/TMath::Max(100,nrings/10) + 1;
+    chunksize = (nrings+nchunks-1)/nchunks;
+  }
+
+//______________________________________________________________________________
+  void fill_work (const std::complex<double> *datain, int nph, int mmax,
+		  bool shifted, const std::vector<std::complex<double> > &shiftarr,
+		  std::vector<std::complex<double> > &work)
+  {
+    for (int m=1; m<nph; ++m) work[m]=0;
+    work[0]=datain[0];
+    
+    int cnt1=0, cnt2=nph;
+    for(int m=1; m<=mmax; ++m){
+      if (++cnt1==nph) cnt1=0;
+      if (--cnt2==-1) cnt2=nph-1;
+      std::complex<double> tmp = shifted ? (datain[m]*shiftarr[m]) : datain[m];
+      work[cnt1] += tmp;
+      work[cnt2] += conj(tmp);
+    }
+  }
+
+//______________________________________________________________________________
+  void read_work (const std::vector<std::complex<double> >& work, int nph,
+		  int mmax, bool shifted,
+		  const std::vector<std::complex<double> > &shiftarr,
+		  std::complex<double> *dataout)
+  {
+    int cnt2=0;
+    for(int m=0; m<=mmax; ++m){
+      dataout[m] = work[cnt2];
+      if (++cnt2==nph) cnt2=0;
+    }
+    if (shifted)
+      for (int m=0; m<=mmax; ++m) dataout[m] *= shiftarr[m];
+  }
+
+//______________________________________________________________________________
+  template<typename T>
+  void fft_map2alm (int nph, int mmax, bool shifted, double weight,
+		    THealFFT::rfft &plan, const T *mapN, const T *mapS,
+		    std::complex<double> *phas_n, std::complex<double> *phas_s,
+		    const std::vector<std::complex<double> > &shiftarr,
+		    std::vector<std::complex<double> > &work)
+  {
+    for (int m=0; m<nph; ++m) work[m] = mapN[m]*weight;
+    plan.forward_c(work);
+    read_work (work, nph, mmax, shifted, shiftarr, phas_n);
+    if (mapN!=mapS){
+      for (int m=0; m<nph; ++m) work[m] = mapS[m]*weight;
+      plan.forward_c(work);
+      read_work (work, nph, mmax, shifted, shiftarr, phas_s);
+    } else {
+      for (int m=0; m<=mmax; ++m) phas_s[m]=0;
+    } // if
+  }
+  
+//______________________________________________________________________________
+  void recalc_map2alm (int nph, int mmax, THealFFT::rfft &plan,
+		       std::vector<std::complex<double> > &shiftarr)
+  {
+    if (plan.size() == nph) return;
+    plan.Set (nph);
+    double f1 = TMath::Pi()/nph;
+    for (int m=0; m<=mmax; ++m){
+      if (m<nph)
+	shiftarr[m] = std::complex<double>(cos(m*f1),-sin(m*f1));
+      else
+	shiftarr[m]=-shiftarr[m-nph];
+    } // m
+  }
+
+//______________________________________________________________________________
+  void recalc_alm2map (int nph, int mmax, THealFFT::rfft &plan,
+		       std::vector<std::complex<double> > &shiftarr)
+  {
+    if (plan.size() == nph) return;
+    plan.Set (nph);
+    double f1 = TMath::Pi()/nph;
+    for (int m=0; m<=mmax; ++m){
+      if (m<nph)
+	shiftarr[m] = std::complex<double>(cos(m*f1),sin(m*f1));
+      else
+	shiftarr[m]=-shiftarr[m-nph];
+    }
+  }
+
+//______________________________________________________________________________
+  template<typename T>
+  void fft_alm2map (int nph, int mmax, bool shifted, THealFFT::rfft &plan,
+		    T *mapN, T *mapS, std::complex<double> *b_north,
+		    const std::complex<double> *b_south,
+		    const std::vector<std::complex<double> > &shiftarr,
+		    std::vector<std::complex<double> > &work)
+  {
+    fill_work (b_north, nph, mmax, shifted, shiftarr, work);
+    plan.backward_c(work);
+    for (int m=0; m<nph; ++m) mapN[m] = work[m].real();
+    if (mapN==mapS) return;
+    fill_work (b_south, nph, mmax, shifted, shiftarr, work);
+    plan.backward_c(work);
+    for (int m=0; m<nph; ++m) mapS[m] = work[m].real();
   }
 }
 
@@ -923,6 +1032,105 @@ void THealPix::Draw(Option_t* option)
     } // if
   }
   AppendPad(option);
+}
+
+//_____________________________________________________________________________
+template<typename T>
+void THealPix::Map2Alm(THealAlm<T>& alm, Bool_t add) const
+{
+  std::vector<Double_t> weight(2*fNside, 1);
+  Map2Alm(alm, weight, add);
+}
+
+//_____________________________________________________________________________
+template<typename T>
+void THealPix::Map2Alm(THealAlm<T>& alm, const std::vector<double>& weight,
+		       Bool_t add) const
+{
+  if(fIsNested){
+    // to be modified
+    return;
+  } // if
+
+  if((Int_t)weight.size() < f2Nside){
+    // to be modified
+    return;
+  } // if
+
+  int lmax = alm.GetLmax(), mmax = alm.GetMmax();
+
+  int nchunks, chunksize;
+  get_chunk_info(f2Nside,nchunks,chunksize);
+
+  std::complex<double> *phas_n[chunksize], *phas_s[chunksize];
+  for(Int_t i = 0; i < chunksize; i++){
+    phas_n[i] = new std::complex<double>[mmax+1];
+    phas_s[i] = new std::complex<double>[mmax+1];
+  } // i
+
+  std::vector<double> cth(chunksize), sth(chunksize);
+  double normfact = TMath::Pi()/(3*fNside2);
+
+  if (!add) alm.SetToZero();
+
+  for(int chunk=0; chunk<nchunks; ++chunk){
+    int llim=chunk*chunksize, ulim=TMath::Min(llim+chunksize,f2Nside);
+    std::vector<std::complex<double> > shiftarr(mmax+1), work(f4Nside);
+    THealFFT::rfft plan;
+
+    for (int ith=llim; ith<ulim; ++ith){
+      int istart_north, istart_south, nph;
+      bool shifted;
+      GetRingInfo (ith+1,istart_north,nph,cth[ith-llim],sth[ith-llim],shifted);
+      istart_south = fNpix - istart_north - nph;
+      recalc_map2alm (nph, mmax, plan, shiftarr);
+      if(GetTypeString() == "D"){
+	const THealPixD* tmp = dynamic_cast<THealPixD*>(this);
+	const Double_t* p1 = &(tmp->GetArray()[istart_north]);
+	const Double_t* p2 = &(tmp->GetArray()[istart_south]);
+	fft_map2alm (nph, mmax, shifted, weight[ith]*normfact, plan,
+		     p1, p2,	phas_n[ith-llim], phas_s[ith-llim], shiftarr, work);
+      } else if(GetTypeString() == "F"){
+	const THealPixF* tmp = dynamic_cast<THealPixF*>(this);
+	const Float_t* p1 = &(tmp->GetArray()[istart_north]);
+	const Float_t* p2 = &(tmp->GetArray()[istart_south]);
+	fft_map2alm (nph, mmax, shifted, weight[ith]*normfact, plan,
+		     p1, p2,	phas_n[ith-llim], phas_s[ith-llim], shiftarr, work);
+      } // if
+    } // ith
+    
+    THealFFT::Ylmgen generator(lmax,mmax,1e-30);
+    std::vector<double> Ylm;
+    std::vector<std::complex<double> > alm_tmp(lmax+1);
+    for (int m=0; m<=mmax; ++m)
+      {
+      for (int l=m; l<=lmax; ++l) alm_tmp[l] = std::complex<double>(0.,0.);
+      for (int ith=0; ith<ulim-llim; ++ith)
+        {
+        int l;
+        generator.get_Ylm(cth[ith],sth[ith],m,Ylm,l);
+        if (l<=lmax)
+          {
+	   std::complex<double> p1 = phas_n[ith][m]+phas_s[ith][m],
+                                p2 = phas_n[ith][m]-phas_s[ith][m];
+          if ((l-m)&1) goto middle;
+start:    alm_tmp[l].real() += p1.real()*Ylm[l]; alm_tmp[l].imag() += p1.imag()*Ylm[l];
+          if (++l>lmax) goto end;
+middle:   alm_tmp[l].real() += p2.real()*Ylm[l]; alm_tmp[l].imag() += p2.imag()*Ylm[l];
+          if (++l<=lmax) goto start;
+end:      ;
+          }
+        }
+      std::complex<T> *palm = alm.GetMstart(m);
+      for (int l=m; l<=lmax; ++l)
+        { palm[l].real() += alm_tmp[l].real(); palm[l].imag() += alm_tmp[l].imag(); }
+      }
+    }
+
+  for(Int_t i = 0; i < chunksize; i++){
+    delete phas_n[i];
+    delete phas_s[i];
+  } // i
 }
 
 //_____________________________________________________________________________
@@ -2245,3 +2453,4 @@ THealPixD operator/(const THealPixD& hp1, const THealPixD& hp2)
    hpnew.SetDirectory(0);
    return hpnew;
 }
+
