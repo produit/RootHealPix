@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.24 2008/07/09 11:50:10 oxon Exp $
+// $Id: THealPix.h,v 1.25 2008/07/11 11:02:23 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -65,8 +65,12 @@ protected:
   Int_t         fOrder;         //Order of resolution
   Int_t         fNside;         //!= 2^fOrder
   Int_t         fNpix;          //!= 12*fNside^2
-  Int_t         fNpFace;        //!= fNside*fNside (used for faster calculation)
-  Int_t         fNcap;          //!= fNpFace*fNside (used for faster calculation)
+  Int_t         fNside2;        //!= fNside*fNside (used for faster calculation)
+  Int_t         fNcap;          //!= 2*fNside*(fNside-1) (used for faster calculation)
+  Double_t      f3Nside2;       //!= 3*fNside*fNside (used for faster calculation)
+  Double_t      f2over3Nside;   //!= 2/(3*fNside) (used for faster calculation)
+  Int_t         f4Nside;        //!= 4*fNside
+  Int_t         f2Nside;        //!= 2*fNside
   Bool_t        fIsDegree;      //deg = true, rad = false
   Bool_t        fIsNested;      //RING = false, NESTED = true
   std::string   fUnit;          //Unit of data (used in FITS header)
@@ -139,6 +143,7 @@ public:
   virtual void     GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const;
   virtual Double_t GetBinContent(Int_t bin) const;
   virtual Double_t GetBinError(Int_t bin) const;
+  virtual Int_t    GetBinVertices(Int_t bin, Double_t* x, Double_t* y) const;
   virtual Int_t    GetContour(Double_t* levels = 0);
   virtual Double_t GetContourLevel(Int_t level) const;
   virtual Double_t GetContourLevelPad(Int_t level) const;
@@ -162,15 +167,16 @@ public:
   virtual std::string GetSchemeString() const;
   virtual Double_t GetSumOfWeights() const;
   virtual TArrayD* GetSumw2() {return &fSumw2;}
-            TAxis* GetXaxis() const;
-            TAxis* GetYaxis() const;
-            TAxis* GetZaxis() const;
+          TAxis*   GetXaxis() const;
+          TAxis*   GetYaxis() const;
+          TAxis*   GetZaxis() const;
   virtual const TArrayD* GetSumw2() const {return &fSumw2;}
   virtual void     GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix, Double_t &costheta, Double_t& sintheta, Bool_t& shifted) const;
   virtual Int_t    GetSumw2N() const {return fSumw2.fN;}
   virtual Int_t    GetType() const = 0;
   virtual std::string GetTypeString() const = 0;
   virtual std::string GetUnit() const { return fUnit;}
+  virtual Bool_t   IsDegree() const {return fIsDegree;}
   virtual Bool_t   IsNested() const {return fIsNested;}
   virtual void     Multiply(const THealPix* hp1);
   virtual void     Paint(Option_t* option = "");
@@ -212,6 +218,57 @@ public:
 
   ClassDef(THealPix, 1);
 };
+
+//_____________________________________________________________________________
+inline void THealPix::Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
+{
+  // Original code is Healpix_Base::nest2xyf of HEALPix C++
+  face = pix>>(2*fOrder);
+  Pix2XY(pix & (fNside2 - 1), x, y);
+}
+
+//_____________________________________________________________________________
+inline Int_t THealPix::XYF2Nest(Int_t x, Int_t y, Int_t face) const
+{
+  // Original code is Healpix_Base::xyf2nest of HEALPix C++
+  return (face<<(2*fOrder)) + XY2Pix(x, y);
+}
+
+//_____________________________________________________________________________
+inline Int_t THealPix::Nest2Ring(Int_t pix) const
+{
+  // Original code is Healpix_Base::nest2ring of HEALPix C++
+  Int_t x, y, face;
+  Nest2XYF(pix, x, y, face);
+  return XYF2Ring(x, y, face);
+}
+
+//_____________________________________________________________________________
+inline Int_t THealPix::Ring2Nest(Int_t pix) const
+{
+  // Original code is Healpix_Base::ring2nest of HEALPix C++
+  Int_t x, y, face;
+  Ring2XYF(pix, x, y, face);
+  return XYF2Nest(x, y, face);
+}
+
+//_____________________________________________________________________________
+inline void THealPix::Pix2XY(Int_t pix, Int_t& x, Int_t& y) const
+{
+  // Original code is Healpix_Base::pix2xy of HEALPix C++
+  Int_t raw = (pix&0x5555) | ((pix&0x55550000)>>15);
+  x = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
+  raw = ((pix&0xaaaa)>>1) | ((pix&0xaaaa0000)>>16);
+  y = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
+}
+
+//_____________________________________________________________________________
+inline Int_t THealPix::XY2Pix(Int_t x, Int_t y) const
+{
+  // Original code is Healpix_Base::xy2pix of HEALPix C++
+  return fgTable.U(x&0xff) | (fgTable.U(x>>8)<<16) | (fgTable.U(y&0xff)<<1)
+    | (fgTable.U(y>>8)<<17);
+}
 
 //______________________________________________________________________________
 class THealPixF : public THealPix, public TArrayF {

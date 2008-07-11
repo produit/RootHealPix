@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.2 2008/07/09 11:50:10 oxon Exp $
+// $Id: THealPainter.cxx,v 1.3 2008/07/11 11:02:24 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -8,7 +8,7 @@
 
 #include <float.h>
 
-#include "Hoption.h"
+#include "Healoption.h"
 #include "Hparam.h"
 #include "TClass.h"
 #include "TColor.h"
@@ -33,7 +33,7 @@
 
 static THealPix* gCurrentHeal = 0;
 
-static Hoption_t Healoption;
+static Healoption_t Healoption;
 static Hparam_t  Healparam;
 
 static const Int_t kNMAX = 2000;
@@ -99,40 +99,68 @@ TList* THealPainter::GetContourList(Double_t contour) const
 }
 
 //______________________________________________________________________________
-Bool_t THealPainter::IsInside(Int_t ix, Int_t iy)
+Bool_t THealPainter::IsInside(Int_t bin /*ix*/, Int_t /*iy*/)
 {
+  for (Int_t i=0;i<fNcuts;i++) {
+    Double_t x, y;
+    fHeal->GetBinCenter(bin, x, y);
+    if(!fHeal->IsDegree()){
+      x *= TMath::RadToDeg();
+      y *= TMath::RadToDeg();
+    } // if
+    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+      x -= 180;
+      y = 90 - y;
+    } else if(Healoption.System == kCelestial){
+      y = 90 - y;
+    } // if
+
+    if (fCutsOpt[i] > 0) {
+      if (!fCuts[i]->IsInside(x,y)) return kFALSE;
+    } else {
+      if (fCuts[i]->IsInside(x,y))  return kFALSE;
+    }
+  }
   return kTRUE;
 }
 
 //______________________________________________________________________________
 Bool_t THealPainter::IsInside(Double_t x, Double_t y)
 {
+  for(Int_t i = 0; i < fNcuts; i++){
+    if(fCutsOpt[i] > 0){
+      if(!fCuts[i]->IsInside(x,y)) return kFALSE;
+    } else {
+      if(fCuts[i]->IsInside(x,y))  return kFALSE;
+    } // if
+  } // if
   return kTRUE;
 }
 
 //______________________________________________________________________________
 Int_t THealPainter::MakeChopt(Option_t* choptin)
 {
+  if(gPad->GetLogx() || gPad->GetLogy()){
+    Error("MakeChopt", "logarithmic X/Y axis is not supported.");
+  } // if
+
   char *l;
   char chopt[128];
   Int_t nch = strlen(choptin);
   strcpy(chopt,choptin);
   
-  Healoption.Axis = Healoption.Bar   = Healoption.Curve   = Healoption.Error = 0;
-  Healoption.Hist = Healoption.Line  = Healoption.Mark    = Healoption.Fill  = 0;
-  Healoption.Same = Healoption.Func  = Healoption.Plus    = Healoption.Scat  = 0;
-  Healoption.Star = Healoption.Arrow = Healoption.Box     = Healoption.Text  = 0;
-  Healoption.Char = Healoption.Color = Healoption.Contour = Healoption.Logx  = 0;
-  Healoption.Logy = Healoption.Logz  = Healoption.Lego    = Healoption.Surf  = 0;
-  Healoption.Off  = Healoption.Tri   = Healoption.Proj    = Healoption.AxisPos = 0;
-  Healoption.Spec = Healoption.Pie   = 0;
+  Healoption.Axis = Healoption.Heal    = Healoption.Same    = Healoption.Func =
+  Healoption.Scat = Healoption.Color   = Healoption.Contour = Healoption.Logz =
+  Healoption.Lego = Healoption.Surf    = Healoption.Off     = Healoption.Tri  =
+  Healoption.AxisPos = 0;
   
   //    special 2D options
   Healoption.List     = 0;
   Healoption.Zscale   = 0;
   Healoption.FrontBox = 1;
   Healoption.BackBox  = 1;
-  Healoption.System   = kCARTESIAN;
+  Healoption.System   = kThetaPhi;
+  Healoption.Proj     = kEquirect;
   
   Healoption.HighRes  = 0;
   
@@ -143,15 +171,8 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   
   for (Int_t i = 0;i < nch; i++) chopt[i] = toupper(chopt[i]);
   Healoption.Scat = 1;
-  if(!nch) Healoption.Hist = 1;
+  if(!nch) Healoption.Heal = 1;
   if(fFunctions->First()) Healoption.Func = 2;
-  
-  l = strstr(chopt,"SPEC");
-  if (l) {
-    Healoption.Scat = 0;
-    Healoption.Spec = 1; strncpy(l,"    ",4);
-    return 1;
-  }
   
   l = strstr(chopt,"GL");
   if (l) {
@@ -167,28 +188,46 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     Healoption.AxisPos += 1;
     strncpy(l,"  ",2);
   }
-  if((Healoption.AxisPos == 10 || Healoption.AxisPos == 1) && (nch == 2)) Healoption.Hist = 1;
-  if(Healoption.AxisPos == 11 && nch == 4) Healoption.Hist = 1;
+  if((Healoption.AxisPos == 10 || Healoption.AxisPos == 1) && (nch == 2)) Healoption.Heal = 1;
+  if(Healoption.AxisPos == 11 && nch == 4) Healoption.Heal = 1;
   
+  l = strstr(chopt, "THETAPHI");
+  if(l){
+    if(nch == 8) Healoption.Heal = 1;
+    Healoption.System = kThetaPhi;
+    strncpy(l, "        ", 8);
+  } // if
+  l = strstr(chopt, "GALACTIC");
+  if(l){
+    if(nch == 8) Healoption.Heal = 1;
+    Healoption.System = kGalactic;
+    strncpy(l, "        ", 8);
+  } // if
+  l = strstr(chopt, "CELESTIAL");
+  if(l){
+    if(nch == 9) Healoption.Heal = 1;
+    Healoption.System = kCelestial;
+    strncpy(l, "         ", 9);
+  } // if
+  l = strstr(chopt, "LATLONG");
+  if(l){
+    if(nch == 7) Healoption.Heal = 1;
+    Healoption.System = kLatLong;
+    strncpy(l, "       ", 7);
+  } // if
+
   l = strstr(chopt,"SAMES");
   if (l) {
-    if (nch == 5) Healoption.Hist = 1;
+    if (nch == 5) Healoption.Heal = 1;
     Healoption.Same = 2;
     strncpy(l,"     ",5);
   }
   l = strstr(chopt,"SAME");
   if (l) {
-    if (nch == 4) Healoption.Hist = 1;
+    if (nch == 4) Healoption.Heal = 1;
     Healoption.Same = 1;
     strncpy(l,"    ",4);
   }
-  
-  l = strstr(chopt,"PIE");
-  if (l) {
-    Healoption.Pie = 1;
-    strncpy(l,"   ",3);
-   }
-  
   l = strstr(chopt,"LEGO");
   if (l) {
     Healoption.Scat = 0;
@@ -214,18 +253,6 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     l = strstr(chopt,"BB");   if (l) { Healoption.BackBox = 0;  strncpy(l,"  ",2); }
   }
   
-  l = strstr(chopt,"TF3");
-  if (l) {
-    l = strstr(chopt,"FB");   if (l) { Healoption.FrontBox = 0; strncpy(l,"  ",2); }
-    l = strstr(chopt,"BB");   if (l) { Healoption.BackBox = 0;  strncpy(l,"  ",2); }
-  }
-  
-  l = strstr(chopt,"ISO");
-  if (l) {
-    l = strstr(chopt,"FB");   if (l) { Healoption.FrontBox = 0; strncpy(l,"  ",2); }
-    l = strstr(chopt,"BB");   if (l) { Healoption.BackBox = 0;  strncpy(l,"  ",2); }
-  }
-  
   l = strstr(chopt,"LIST");    if (l) { Healoption.List = 1;  strncpy(l,"    ",4);}
   
   l = strstr(chopt,"CONT");
@@ -238,115 +265,39 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     if (l[4] == '4') { Healoption.Contour = 14; l[4] = ' '; }
     if (l[4] == '5') { Healoption.Contour = 15; l[4] = ' '; }
   }
-  l = strstr(chopt,"HBAR");
-  if (l) {
-    Healoption.Hist = 0;
-    Healoption.Bar = 20; strncpy(l,"    ",4);
-    if (l[4] == '1') { Healoption.Bar = 21; l[4] = ' '; }
-    if (l[4] == '2') { Healoption.Bar = 22; l[4] = ' '; }
-    if (l[4] == '3') { Healoption.Bar = 23; l[4] = ' '; }
-    if (l[4] == '4') { Healoption.Bar = 24; l[4] = ' '; }
-  }
-  l = strstr(chopt,"BAR");
-  if (l) {
-    Healoption.Hist = 0;
-    Healoption.Bar = 10; strncpy(l,"   ",3);
-    if (l[3] == '1') { Healoption.Bar = 11; l[3] = ' '; }
-    if (l[3] == '2') { Healoption.Bar = 12; l[3] = ' '; }
-    if (l[3] == '3') { Healoption.Bar = 13; l[3] = ' '; }
-    if (l[3] == '4') { Healoption.Bar = 14; l[3] = ' '; }
-  }
-  l = strstr(chopt,"+-");   if (l) { Healoption.Plus = 2; strncpy(l,"  ",2); }
-  l = strstr(chopt,"-+");   if (l) { Healoption.Plus = 2; strncpy(l,"  ",2); }
-  
-  l = strstr(chopt,"ARR" ); if (l) { Healoption.Arrow  = 1; strncpy(l,"   ", 3); Healoption.Scat = 0; }
-  l = strstr(chopt,"BOX" );
-  if (l) {
-    Healoption.Scat = 0;
-    Healoption.Box  = 1; strncpy(l,"   ", 3);
-    if (l[3] == '1') { Healoption.Box = 11; l[3] = ' '; }
-  }
   l = strstr(chopt,"COLZ"); if (l) { Healoption.Color  = 2; strncpy(l,"    ",4); Healoption.Scat = 0; Healoption.Zscale = 1;}
   l = strstr(chopt,"COL" ); if (l) { Healoption.Color  = 1; strncpy(l,"   ", 3); Healoption.Scat = 0; }
-  l = strstr(chopt,"CHAR"); if (l) { Healoption.Char   = 1; strncpy(l,"    ",4); Healoption.Scat = 0; }
-  l = strstr(chopt,"FUNC"); if (l) { Healoption.Func   = 2; strncpy(l,"    ",4); Healoption.Hist = 0; }
-  l = strstr(chopt,"HIST"); if (l) { Healoption.Hist   = 2; strncpy(l,"    ",4); Healoption.Func = 0; Healoption.Error = 0;}
+  l = strstr(chopt,"FUNC"); if (l) { Healoption.Func   = 2; strncpy(l,"    ",4); Healoption.Heal = 0; }
+  l = strstr(chopt,"HEAL"); if (l) { Healoption.Heal   = 2; strncpy(l,"    ",4); Healoption.Func = 0;}
   l = strstr(chopt,"AXIS"); if (l) { Healoption.Axis   = 1; strncpy(l,"    ",4); }
   l = strstr(chopt,"AXIG"); if (l) { Healoption.Axis   = 2; strncpy(l,"    ",4); }
   l = strstr(chopt,"SCAT"); if (l) { Healoption.Scat   = 1; strncpy(l,"    ",4); }
-  l = strstr(chopt,"TEXT");
+
+  l = strstr(chopt, "AITOFF");
+  if(l){
+    Healoption.Proj = kEquirect;
+    strncpy(l, "      ", 6);
+  } // if
+  l = strstr(chopt, "LAMBERT");
+  if(l){
+    Healoption.Proj = kLambert;
+    strncpy(l, "       ", 7);
+  } // if
+  l = strstr(chopt, "HAMMER");
   if (l) {
-    Int_t angle;
-    if (sscanf(&l[4],"%d",&angle) > 0) {
-      if (angle < 0)  angle=0;
-      if (angle > 90) angle=90;
-      Healoption.Text = 1000+angle;
-    } else {
-      Healoption.Text = 1;
-    }
-    strncpy(l,"    ",4);
-    Healoption.Scat = 0;
-  }
-  l = strstr(chopt,"POL");  if (l) { Healoption.System = kPOLAR;       strncpy(l,"   ",3); }
-  l = strstr(chopt,"CYL");  if (l) { Healoption.System = kCYLINDRICAL; strncpy(l,"   ",3); }
-  l = strstr(chopt,"SPH");  if (l) { Healoption.System = kSPHERICAL;   strncpy(l,"   ",3); }
-  l = strstr(chopt,"PSR");  if (l) { Healoption.System = kRAPIDITY;    strncpy(l,"   ",3); }
-  
-  l = strstr(chopt,"TRI");
+    Healoption.Proj = 2;
+    strncpy(l, "      ", 6);
+  } // if
+  l = strstr(chopt, "EQUIRECT");
   if (l) {
-    Healoption.Scat = 0;
-    Healoption.Color  = 0;
-    Healoption.Tri = 1; strncpy(l,"   ",3);
-    l = strstr(chopt,"FB");   if (l) { Healoption.FrontBox = 0; strncpy(l,"  ",2); }
-    l = strstr(chopt,"BB");   if (l) { Healoption.BackBox = 0;  strncpy(l,"  ",2); }
-  }
-  
-  l = strstr(chopt,"AITOFF");
-  if (l) {
-    Healoption.Proj = 1; strncpy(l,"     ",6);       //Aitoff projection
-  }
-  l = strstr(chopt,"MERCATOR");
-  if (l) {
-    Healoption.Proj = 2; strncpy(l,"       ",8);     //Mercator projection
-  }
-  l = strstr(chopt,"SINUSOIDAL");
-  if (l) {
-    Healoption.Proj = 3; strncpy(l,"         ",10);  //Sinusoidal projection
-  }
-  l = strstr(chopt,"PARABOLIC");
-  if (l) {
-    Healoption.Proj = 4; strncpy(l,"        ",9);    //Parabolic projection
-  }
-  if (Healoption.Proj > 0) {
-    Healoption.Scat = 0;
-    Healoption.Contour = 14;
-  }
+    Healoption.Proj = kEquirect;
+    strncpy(l, "       ", 7);
+  } // if
   
   if (strstr(chopt,"A"))   Healoption.Axis = -1;
-  if (strstr(chopt,"B"))   Healoption.Bar  = 1;
-  if (strstr(chopt,"C")) { Healoption.Curve =1; Healoption.Hist = -1;}
-  if (strstr(chopt,"F"))   Healoption.Fill =1;
-  if (strstr(chopt,"][")) {Healoption.Off  =1; Healoption.Hist =1;}
-  if (strstr(chopt,"F2"))  Healoption.Fill =2;
-  if (strstr(chopt,"L")) { Healoption.Line =1; Healoption.Hist = -1;}
-  if (strstr(chopt,"P")) { Healoption.Mark =1; Healoption.Hist = -1;}
+  if (strstr(chopt,"][")) {Healoption.Off  =1; Healoption.Heal =1;}
   if (strstr(chopt,"Z"))   Healoption.Zscale =1;
-  if (strstr(chopt,"*"))   Healoption.Star =1;
-  if (strstr(chopt,"+"))   Healoption.Plus =1;
-  if (strstr(chopt,"-"))   Healoption.Plus =-1;
-  if (strstr(chopt,"H"))   Healoption.Hist =2;
-  if (strstr(chopt,"P0"))  Healoption.Mark =10;
-  if (strstr(chopt,"E")) {
-    if (Healoption.Error == 0) {
-      Healoption.Error = 100;
-      Healoption.Scat  = 0;
-    }
-    if (Healoption.Text) {
-      Healoption.Text += 2000;
-      Healoption.Error = 0;
-    }
-  }
-  
+  if (strstr(chopt,"H"))   Healoption.Heal =2;
   if (strstr(chopt,"9"))  Healoption.HighRes = 1;
   
   if (Healoption.Surf == 15) {
@@ -357,28 +308,10 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   }
   
   //      Copy options from current style
-  Healoption.Logx = gPad->GetLogx();
-  Healoption.Logy = gPad->GetLogy();
-  Healoption.Logz = gPad->GetLogz();
+  Healoption.Logz = gPad->GetLogz(); // Z only
   
   //       Check options incompatibilities
-  if (Healoption.Bar  == 1) Healoption.Hist = -1;
-  if (Healoption.Same && Healoption.Plus) {
-    Error("MakeChopt", "select only one of the options S,+");
-    return 0;
-  }
-  if (Healoption.Plus) {
-    if (Healoption.Line || Healoption.Curve || Healoption.Text || Healoption.Mark) {
-      Error("MakeChopt", "options L,C,T,P are incompatible with options U and K");
-      if (Healoption.Hist && Healoption.Bar) return 0;
-    }
-  }
-  if (Healoption.Error || Healoption.Func || Healoption.Star) {
-    if (Healoption.Plus) {
-      Error("MakeChopt", "U, + options incompatible with errors/function");
-      return 0;
-    }
-  }
+
   return 1;
 }
 
@@ -441,6 +374,26 @@ void THealPainter::Paint(Option_t* option)
     return;
   } // if
 
+  if(Healoption.Proj == kLambert){
+    printf("lambert\n");
+    fXaxis->Set(1, -1., 1.);
+    fYaxis->Set(1, -1., 1.);
+  } else {
+    if(Healoption.System == kThetaPhi){
+      fXaxis->Set(1, 0., 360.);
+      fYaxis->Set(1, 0., 180.);
+    } else if(Healoption.System == kGalactic){
+      fXaxis->Set(1, -180., 180.);
+      fYaxis->Set(1, -90., 90.);
+    } else if(Healoption.System == kCelestial){
+      fXaxis->Set(1, 0., 360.);
+      fYaxis->Set(1, -90., 90.);
+    } else if(Healoption.System == kLatLong){
+      fXaxis->Set(1, -180., 180.);
+      fYaxis->Set(1, -90., 90.);
+    } // if
+  } // if
+
   fXbuf = new Double_t[kNMAX];
   fYbuf = new Double_t[kNMAX];
 
@@ -454,8 +407,16 @@ void THealPainter::Paint(Option_t* option)
 
   PaintTable(option);
   fHeal->SetMinimum(minsav);
+  if(Healoption.Func){
+    Healoption_t hoptsave = Healoption;
+    Hparam_t  hparsave = Healparam;
+    PaintFunction(option);
+    SetHealPix(healsave);
+    Healoption = hoptsave;
+    Healparam  = hparsave;
+  }
   gCurrentHeal = oldheal;
-
+  
   delete [] fXbuf;
   delete [] fYbuf;
 }
@@ -502,6 +463,154 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
     } // while
   } // if
   
+   // Paint X axis
+   Int_t ndivx = fXaxis->GetNdivisions();
+   if (ndivx > 1000) {
+      Int_t nx2   = ndivx/100;
+      Int_t nx1   = TMath::Max(1, ndivx%100);
+      ndivx = 100*nx2 + Int_t(Float_t(nx1)*gPad->GetAbsWNDC());
+   }
+   axis.SetTextAngle(0);
+   axis.ImportAxisAttributes(fXaxis);
+
+   chopt[0] = 0;
+   strcat(chopt, "SDH");
+   if (ndivx < 0) strcat(chopt, "N");
+   if (gPad->GetGridx()) {
+      gridl = (aymax-aymin)/(gPad->GetY2() - gPad->GetY1());
+      strcat(chopt, "W");
+   }
+
+   // Define X-Axis limits
+   ndiv = TMath::Abs(ndivx);
+   if (useHealparam) {
+     umin = Healparam.xmin;
+     umax = Healparam.xmax;
+   } else {
+     umin = axmin;
+     umax = axmax;
+   }
+
+   // Display axis as time
+   if (fXaxis->GetTimeDisplay()) {
+      strcat(chopt,"t");
+      if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
+         axis.SetTimeFormat(fXaxis->ChooseTimeFormat(Healparam.xmax-Healparam.xmin));
+      }
+   }
+
+   // The main X axis can be on the bottom or on the top of the pad
+   Double_t xAxisYPos1, xAxisYPos2;
+   if (xAxisPos == 1) {
+      // Main X axis top
+      xAxisYPos1 = aymax;
+      xAxisYPos2 = aymin;
+   } else {
+      // Main X axis bottom
+      xAxisYPos1 = aymin;
+      xAxisYPos2 = aymax;
+   }
+
+   // Paint the main X axis (always)
+   uminsave = umin;
+   umaxsave = umax;
+   ndivsave = ndiv;
+   axis.SetOption(chopt);
+   if (xAxisPos) {
+      strcat(chopt, "-");
+      gridl = -gridl;
+   }
+   axis.PaintAxis(axmin, xAxisYPos1,
+                  axmax, xAxisYPos1,
+                  umin, umax,  ndiv, chopt, gridl, drawGridOnly);
+
+   // Paint additional X axis (if needed)
+   if (gPad->GetTickx()) {
+      if (xAxisPos) {
+         cw=strstr(chopt,"-");
+         *cw='z';
+      } else {
+         strcat(chopt, "-");
+      }
+      if (gPad->GetTickx() < 2) strcat(chopt, "U");
+      if ((cw=strstr(chopt,"W"))) *cw='z';
+      axis.SetTitle("");
+      axis.PaintAxis(axmin, xAxisYPos2,
+                     axmax, xAxisYPos2,
+                     uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+   }
+
+   // Paint Y axis
+   Int_t ndivy = fYaxis->GetNdivisions();
+   axis.ImportAxisAttributes(fYaxis);
+
+   chopt[0] = 0;
+   strcat(chopt, "SDH");
+   if (ndivy < 0) strcat(chopt, "N");
+   if (gPad->GetGridy()) {
+      gridl = (axmax-axmin)/(gPad->GetX2() - gPad->GetX1());
+      strcat(chopt, "W");
+   }
+
+   // Define Y-Axis limits
+   ndiv = TMath::Abs(ndivy);
+   if (useHealparam) {
+     umin = Healparam.ymin;
+     umax = Healparam.ymax;
+   } else {
+     umin = aymin;
+     umax = aymax;
+   }
+
+   // Display axis as time
+   if (fYaxis->GetTimeDisplay()) {
+      strcat(chopt,"t");
+      if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
+         axis.SetTimeFormat(fYaxis->ChooseTimeFormat(Healparam.ymax-Healparam.ymin));
+      }
+   }
+
+   // The main Y axis can be on the left or on the right of the pad
+   Double_t yAxisXPos1, yAxisXPos2;
+   if (yAxisPos == 1) {
+      // Main Y axis left
+      yAxisXPos1 = axmax;
+      yAxisXPos2 = axmin;
+   } else {
+      // Main Y axis right
+      yAxisXPos1 = axmin;
+      yAxisXPos2 = axmax;
+   }
+
+   // Paint the main Y axis (always)
+   uminsave = umin;
+   umaxsave = umax;
+   ndivsave = ndiv;
+   axis.SetOption(chopt);
+   if (yAxisPos) {
+      strcat(chopt, "+L");
+      gridl = -gridl;
+   }
+   axis.PaintAxis(yAxisXPos1, aymin,
+                  yAxisXPos1, aymax,
+                  umin, umax,  ndiv, chopt, gridl, drawGridOnly);
+
+   // Paint the additional Y axis (if needed)
+   if (gPad->GetTicky()) {
+      if (gPad->GetTicky() < 2) {
+         strcat(chopt, "U");
+         axis.SetTickSize(-fYaxis->GetTickLength());
+      } else {
+         strcat(chopt, "+L");
+      }
+      if ((cw=strstr(chopt,"W"))) *cw='z';
+      axis.SetTitle("");
+      axis.PaintAxis(yAxisXPos2, aymin,
+                     yAxisXPos2, aymax,
+                     uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+   }
+
+  /*
   // Paint X axis
   Int_t ndivx = fXaxis->GetNdivisions();
   if (ndivx > 1000) {
@@ -513,35 +622,32 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
   axis.ImportAxisAttributes(fXaxis);
   
   chopt[0] = 0;
-  strcat(chopt, "SDH");
+  if(Healoption.System == kThetaPhi || Healoption.System == kLatLong){
+    strcat(chopt, "SDHR+");
+  } else {
+    strcat(chopt, "SDHL-");
+    axis.SetLabelOffset(-TMath::Abs(axis.GetLabelOffset()));
+  } // if
   if(ndivx < 0){
     strcat(chopt, "N");
   } // if
   if(gPad->GetGridx()){
-    gridl = (aymax - aymin)/(gPad->GetY2() - gPad->GetY1());
+    if(Healoption.System == kThetaPhi || Healoption.System == kLatLong){
+      gridl = (aymax - aymin)/(gPad->GetY2() - gPad->GetY1());
+    } else {
+      gridl = -(aymax - aymin)/(gPad->GetY2() - gPad->GetY1());
+    } // if
     strcat(chopt, "W");
   } // if
   
   // Define X-Axis limits
-  if(Healoption.Logx){
-    strcat(chopt, "G");
-    ndiv = TMath::Abs(ndivx);
-    if(useHealparam){
-      umin = TMath::Power(10, Healparam.xmin);
-      umax = TMath::Power(10, Healparam.xmax);
-    } else {
-      umin = TMath::Power(10, axmin);
-      umax = TMath::Power(10, axmax);
-    } // if
+  ndiv = TMath::Abs(ndivx);
+  if(useHealparam){
+    umin = Healparam.xmin;
+    umax = Healparam.xmax;
   } else {
-    ndiv = TMath::Abs(ndivx);
-    if(useHealparam){
-      umin = Healparam.xmin;
-      umax = Healparam.xmax;
-    } else {
-      umin = axmin;
-      umax = axmax;
-    } // if
+    umin = axmin;
+    umax = axmax;
   } // if
   
   // The main X axis can be on the bottom or on the top of the pad
@@ -562,11 +668,23 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
   ndivsave = ndiv;
   axis.SetOption(chopt);
   if(xAxisPos){
-    strcat(chopt, "-");
+    if(Healoption.System == kThetaPhi || Healoption.System == kLatLong){
+      strcat(chopt, "R+");
+    } else {
+      char* c = strstr(chopt, "R+");
+      if(c) strncpy(c, "  ", 2);
+      strcat(chopt, "L-");
+      axis.SetLabelOffset(-TMath::Abs(axis.GetLabelOffset()));
+    } // if
     gridl = -gridl;
   } // if
-  axis.PaintAxis(axmin, xAxisYPos1, axmax, xAxisYPos1,
-		 umin, umax,  ndiv, chopt, gridl, drawGridOnly);
+  if(Healoption.System == kThetaPhi || Healoption.System == kLatLong){
+    axis.PaintAxis(axmin, xAxisYPos1, axmax, xAxisYPos1,
+		   umin, umax,  ndiv, chopt, gridl, drawGridOnly);
+  } else {
+    axis.PaintAxis(axmax, xAxisYPos1, axmin, xAxisYPos1,
+		   umin, umax,  ndiv, chopt, gridl, drawGridOnly);
+  } // if
   
   // Paint additional X axis (if needed)
   if(gPad->GetTickx()){
@@ -586,13 +704,14 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
     axis.PaintAxis(axmin, xAxisYPos2, axmax, xAxisYPos2,
 		   uminsave, umaxsave, ndivsave, chopt, gridl, drawGridOnly);
   }
-  
+  printf("%s\n", chopt);
   // Paint Y axis
   Int_t ndivy = fYaxis->GetNdivisions();
   axis.ImportAxisAttributes(fYaxis);
-  
+  axis.SetLabelOffset(-axis.GetLabelOffset());
+
   chopt[0] = 0;
-  strcat(chopt, "SDH");
+  strcat(chopt, "SDHR+");
   if(ndivy < 0){
     strcat(chopt, "N");
   } // if
@@ -602,25 +721,13 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
   } // if
   
   // Define Y-Axis limits
-  if(Healoption.Logy){
-    strcat(chopt, "G");
-    ndiv = TMath::Abs(ndivy);
-    if(useHealparam){
-      umin = TMath::Power(10, Healparam.ymin);
-      umax = TMath::Power(10, Healparam.ymax);
-    } else {
-      umin = TMath::Power(10, aymin);
-      umax = TMath::Power(10, aymax);
-    } // if
+  ndiv = TMath::Abs(ndivy);
+  if(useHealparam){
+    umin = Healparam.ymin;
+    umax = Healparam.ymax;
   } else {
-    ndiv = TMath::Abs(ndivy);
-    if(useHealparam){
-      umin = Healparam.ymin;
-      umax = Healparam.ymax;
-    } else {
-      umin = aymin;
-      umax = aymax;
-    } // if
+    umin = aymin;
+    umax = aymax;
   } // if
   
   // Display axis as time
@@ -642,17 +749,21 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
     yAxisXPos1 = axmin;
     yAxisXPos2 = axmax;
   } // if
-  
+
   // Paint the main Y axis (always)
   uminsave = umin;
   umaxsave = umax;
   ndivsave = ndiv;
   axis.SetOption(chopt);
   if(yAxisPos){
-    strcat(chopt, "+L");
+    char* c = strstr(chopt, "R+");
+    if(c) strncpy(c, "  ", 2);
+    strcat(chopt, "L-");
+    axis.SetLabelOffset(-axis.GetLabelOffset());
     gridl = -gridl;
   } // if
-  axis.PaintAxis(yAxisXPos1, aymin, yAxisXPos1, aymax,
+
+  axis.PaintAxis(yAxisXPos1, aymax, yAxisXPos1 - 1e-3, aymin,
 		 umin, umax,  ndiv, chopt, gridl, drawGridOnly);
   
   // Paint the additional Y axis (if needed)
@@ -661,83 +772,17 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
       strcat(chopt, "U");
       axis.SetTickSize(-fYaxis->GetTickLength());
     } else {
-      strcat(chopt, "+L");
+      strcat(chopt, "-L");
     } // if
     if((cw=strstr(chopt,"W"))){
       *cw='z';
     } // if
     axis.SetTitle("");
-    axis.PaintAxis(yAxisXPos2, aymin, yAxisXPos2, aymax,
+    axis.PaintAxis(yAxisXPos2, aymax, yAxisXPos2 - 1e-3, aymin,
 		   uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
   } // if
-}
-
-//______________________________________________________________________________
-void THealPainter::PaintBarH(Option_t* option)
-{
-  printf("*****PaintBarH*****\n");
-  gPad->SetVertical(kFALSE);
-  
-  PaintInitH();
-  
-  TAxis* xaxis = fXaxis;
-  TAxis* yaxis = fYaxis;
-  if (!strcmp(xaxis->GetName(), "xaxis")) {
-    fXaxis = yaxis;
-    fYaxis = xaxis;
-  }
-
-  PaintFrame();
-  
-  Int_t bar = Healoption.Bar - 20;
-  Double_t xmin, xmax, ymin, ymax, umin, umax, w;
-  Double_t offset = fHeal->GetBarOffset();
-  Double_t width  = fHeal->GetBarWidth();
-  TBox box;
-  Int_t hcolor = fHeal->GetFillColor();
-  Int_t hstyle = fHeal->GetFillStyle();
-  box.SetFillColor(hcolor);
-  box.SetFillStyle(hstyle);
-  for(Int_t bin = fYaxis->GetFirst(); bin <= fYaxis->GetLast(); bin++) {
-    ymin = gPad->YtoPad(fYaxis->GetBinLowEdge(bin));
-    ymax = gPad->YtoPad(fYaxis->GetBinUpEdge(bin));
-    xmin = gPad->GetUxmin();
-    xmax = gPad->XtoPad(fHeal->GetBinContent(bin));
-    if(xmax < gPad->GetUxmin()) continue;
-    if(xmax > gPad->GetUxmax()) xmax = gPad->GetUxmax();
-    if(xmin < gPad->GetUxmin()) xmin = gPad->GetUxmin();
-    w = (ymax - ymin)*width;
-    ymin += offset*(ymax - ymin);
-    ymax = ymin + w;
-    if(bar < 1){
-      box.PaintBox(xmin, ymin, xmax, ymax);
-    } else {
-      umin = ymin + bar*(ymax - ymin)/10.;
-      umax = ymax - bar*(ymax - ymin)/10.;
-      box.SetFillColor(TColor::GetColorDark(hcolor)); //dark
-      box.PaintBox(xmin, ymin, xmax, umin);
-      box.SetFillColor(hcolor);
-      box.PaintBox(xmin, umin, xmax, umax);
-      box.SetFillColor(TColor::GetColorBright(hcolor)); //bright
-      box.PaintBox(xmin, umax, xmax, ymax);
-    } // if
-  } // bin
-
-  PaintTitle();
- //    Draw box with histogram statistics and/or fit parameters
-  if(Healoption.Same != 1 && !fHeal->TestBit(THealPix::kNoStats)){  // bit set via TH1::SetStats
-    TIter next(fFunctions);
-    TObject* obj = 0;
-    while ((obj = next())) {
-      if (obj->InheritsFrom(TF1::Class())) break;
-      obj = 0;
-    } // while
-    PaintStat(gStyle->GetOptStat(), (TF1*)obj);
-  } // if
-
-  PaintAxis(kFALSE);
-  fXaxis = xaxis;
-  fYaxis = yaxis;  
+  printf("%s\n", chopt);
+  */
 }
 
 //______________________________________________________________________________
@@ -745,8 +790,6 @@ void THealPainter::PaintColorLevels(Option_t* option)
 {
   printf("*****PaintColorLevels*****\n");
 
-  Double_t z, zc, xk, xstep, yk, ystep, xlow, xup, ylow, yup;
-  
   Double_t zmin = fHeal->GetMinimum();
   Double_t zmax = fHeal->GetMaximum();
   if(Healoption.Logz){
@@ -763,7 +806,7 @@ void THealPainter::PaintColorLevels(Option_t* option)
   if(dz <= 0){
     return;
   } // if
-  
+
   Style_t fillsav = fHeal->GetFillStyle();
   Style_t colsav  = fHeal->GetFillColor();
   fHeal->SetFillStyle(1001);
@@ -783,87 +826,72 @@ void THealPainter::PaintColorLevels(Option_t* option)
   Double_t scale = ndivz/dz;
   
   Int_t color;
-  for(Int_t j = Healparam.yfirst; j <= Healparam.ylast; j++){
-    yk    = fYaxis->GetBinLowEdge(j);
-    ystep = fYaxis->GetBinWidth(j);
-    if(Healoption.System == kPOLAR && yk < 0){
-      yk= 2*TMath::Pi() + yk;
+  Double_t xmin = gPad->GetUxmin();
+  Double_t xmax = gPad->GetUxmax();
+  Double_t ymin = gPad->GetUymin();
+  Double_t ymax = gPad->GetUymax();
+
+  for(Int_t bin = 0; bin < fHeal->GetNpix(); bin++){
+    Double_t z = fHeal->GetBinContent(bin);
+    if(z == 0 && (zmin >= 0 || Healoption.Logz)){
+      continue; // don't draw the empty bins for histograms with positive content
     } // if
-    for(Int_t i = Healparam.xfirst; i <= Healparam.xlast; i++){
-      Int_t bin = j*(fXaxis->GetNbins() + 2) + i;
-      xk    = fXaxis->GetBinLowEdge(i);
-      xstep = fXaxis->GetBinWidth(i);
-      if(!IsInside(xk + 0.5*xstep, yk + 0.5*ystep)){
-	continue;
-      } // if
-      z = fHeal->GetBinContent(bin);
-      if(z == 0 && (zmin >= 0 || Healoption.Logz)){
-	continue; // don't draw the empty bins for histograms with positive content
-      } // if
-      if(Healoption.Logz){
-	z = z > 0 ? TMath::Log10(z) : zmin;
-      } // if
-      if(z < zmin){
-	continue;
-      } // if
-      xup  = xk + xstep;
-      xlow = xk;
-      if(Healoption.Logx){
-	if (xup > 0)  xup  = TMath::Log10(xup);
-	else continue;
-	if (xlow > 0) xlow = TMath::Log10(xlow);
-	else continue;
-      } // if
-      yup  = yk + ystep;
-      ylow = yk;
-      if(Healoption.System != kPOLAR){
-	if(Healoption.Logy){
-	  if (yup > 0)  yup  = TMath::Log10(yup);
-	  else continue;
-	  if (ylow > 0) ylow = TMath::Log10(ylow);
-	  else continue;
-	} // if
-	if(xup  < gPad->GetUxmin()) continue;
-	if(yup  < gPad->GetUymin()) continue;
-	if(xlow > gPad->GetUxmax()) continue;
-	if(ylow > gPad->GetUymax()) continue;
-	if(xlow < gPad->GetUxmin()) xlow = gPad->GetUxmin();
-	if(ylow < gPad->GetUymin()) ylow = gPad->GetUymin();
-	if(xup  > gPad->GetUxmax()) xup  = gPad->GetUxmax();
-	if(yup  > gPad->GetUymax()) yup  = gPad->GetUymax();
-      } // if
-      
-      if(fHeal->TestBit(THealPix::kUserContour)){
-	zc = fHeal->GetContourLevelPad(0);
-	if (z < zc) continue;
-	color = -1;
-	for(Int_t k = 0; k < ndiv; k++){
-	  zc = fHeal->GetContourLevelPad(k);
-	  if(z < zc){
-	    continue;
-	  } else {
-	    color++;
-	  } // if
-	} // k
-      } else {
-	color = Int_t(0.01 + (z - zmin)*scale);
-      } // if
-      
-      Int_t theColor = Int_t((color + 0.99)*Float_t(ncolors)/Float_t(ndivz));
-      if(theColor > ncolors - 1){
-	theColor = ncolors - 1;
-      } // if
-      fHeal->SetFillColor(gStyle->GetColorPalette(theColor));
-      fHeal->TAttFill::Modify();
-      if(Healoption.System != kPOLAR){
-	gPad->PaintBox(xlow, ylow, xup, yup);
-      } else {
-	TCrown crown(0,0,xlow,xup,ylow*TMath::RadToDeg(),yup*TMath::RadToDeg());
-	crown.SetFillColor(gStyle->GetColorPalette(theColor));
-	crown.Paint();
-      } // if
+    if(Healoption.Logz){
+      z = z > 0 ? TMath::Log10(z) : zmin;
+    } // if
+    if(z < zmin){
+      continue;
+    } // if
+
+    Double_t theta, phi; // x/y center
+    fHeal->GetBinCenter(bin, theta, phi);
+    if(!fHeal->IsDegree()){
+      theta *= TMath::RadToDeg();
+      phi *= TMath::RadToDeg();
+    } // if
+    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+      theta = 90 - theta;
+      phi -= 180;
+    } else if(Healoption.System == kCelestial){
+      theta = 90 - theta;
+    } // if
+
+    if(!IsInside(phi, theta)){
+      continue;
+    } // if
+
+    Double_t x[5], y[5];
+    for(int i=0; i<5; i++){
+      x[i] = phi;
+      y[i] = theta;
     } // i
-  } // j
+    x[0] += 0.5; x[1] += 0.; x[2] += -0.5; x[3] += 0.;
+    y[0] += 0.; y[1] += 0.5; y[2] += 0.; y[3] += -0.5;
+    Int_t n = fHeal->GetBinVertices(bin, x, y);
+    if(fHeal->TestBit(THealPix::kUserContour)){
+      Double_t zc = fHeal->GetContourLevelPad(0);
+      if (z < zc) continue;
+      color = -1;
+      for(Int_t k = 0; k < ndiv; k++){
+	zc = fHeal->GetContourLevelPad(k);
+	if(z < zc){
+	  continue;
+	} else {
+	  color++;
+	} // if
+      } // k
+    } else {
+      color = Int_t(0.01 + (z - zmin)*scale);
+    } // if
+    
+    Int_t theColor = Int_t((color + 0.99)*Float_t(ncolors)/Float_t(ndivz));
+    if(theColor > ncolors - 1){
+      theColor = ncolors - 1;
+    } // if
+    fHeal->SetFillColor(gStyle->GetColorPalette(theColor));
+    fHeal->TAttFill::Modify();
+    gPad->PaintFillArea(n, x, y);
+  } // bin
   
   if(Healoption.Zscale){
     PaintPalette();
@@ -877,157 +905,7 @@ void THealPainter::PaintColorLevels(Option_t* option)
 //______________________________________________________________________________
 void THealPainter::PaintContour(Option_t* option)
 {
-}
-
-//______________________________________________________________________________
-Int_t THealPainter::PaintInit()
-{
-  printf("*****PaintInit*****\n");
-  return 1;
-}
-
-//______________________________________________________________________________
-Int_t THealPainter::PaintInitH()
-{
-  printf("*****PaintInitH*****\n");
-  /*
-  static const char* where = "PaintInitH";
-  Double_t yMARGIN = gStyle->GetHistTopMargin();
-  Int_t maximum = 0;
-  Int_t minimum = 0;
-  if(fHeal->GetMaximumStored() != -1111) maximum = 1;
-  if(fHeal->GetMinimumStored() != -1111) minimum = 1;
-  
-  //     Compute X axis parameters
-  
-  Int_t last      = fXaxis->GetLast();
-  Int_t first     = fXaxis->GetFirst();
-  Healparam.xlowedge = fXaxis->GetBinLowEdge(first);
-  Healparam.xbinsize = fXaxis->GetBinWidth(first);
-  Healparam.xlast    = last;
-  Healparam.xfirst   = first;
-  Healparam.ymin     = Healparam.xlowedge;
-  Healparam.ymax     = fXaxis->GetBinLowEdge(last) + fXaxis->GetBinWidth(last);
-  
-  //       if log scale in Y, replace ymin,max by the log
-  if(Healoption.Logy){
-    if(Healparam.xlowedge <= 0 ){
-      Healparam.xlowedge = 0.1*Healparam.xbinsize;
-      Healparam.ymin  = Healparam.xlowedge;
-    } // if
-    if(Healparam.ymin <= 0 || Healparam.ymax <= 0){
-      Error(where, "cannot set Y axis to log scale");
-      return 0;
-    } // if
-    Healparam.xfirst= fXaxis->FindFixBin(Healparam.ymin);
-    Healparam.xlast = fXaxis->FindFixBin(Healparam.ymax);
-    Healparam.ymin  = TMath::Log10(Healparam.ymin);
-    Healparam.ymax  = TMath::Log10(Healparam.ymax);
-    if(Healparam.xlast > last) Healparam.xlast = last;
-  } // if
-  
-  //     Compute Y axis parameters
-  Double_t bigp = TMath::Power(10, 32);
-  Double_t xmax = -bigp;
-  Double_t xmin = bigp;
-  Double_t allchan = 0;
-
-  for(Int_t i = first; i <= last; i++){
-    Dobule_t c1 = fHeal->GetBinContent(i);
-    xmax = TMath::Max(xmax, c1);
-    xmin = TMath::Min(xmin, c1);
-    if(Healoption.Error){
-      Double_t e1 = fHeal->GetBinError(i);
-      xmax = TMath::Max(xmax, c1 + e1);
-      xmin = TMath::Min(xmin, c1 - e1);
-    } // if
-    allchan += c1;
-  }
-  
-  //     Take into account maximum , minimum
-  
-  if (Healoption.Logx && xmin <= 0) {
-    if (xmax >= 1) xmin = TMath::Max(.5,xmax*1e-10);
-    else           xmin = 0.001*xmax;
-  }
-  Double_t xm = xmin;
-  if (maximum) xmax = fHeal->GetMaximumStored();
-  if (minimum) xm   = fHeal->GetMinimumStored();
-  if (Healoption.Logx && xm <= 0) {
-    Error(where, "log scale requested with zero or negative argument (%f)", xm);
-    return 0;
-  }
-  else xmin = xm;
-  if (xmin >= xmax && !Healoption.Plus) {
-    if (Healoption.Logx) {
-      if (xmax > 0) xmin = 0.001*xmax;
-      else {
-	if (!Healoption.Same) Error(where, "log scale is requested but maximum is less or equal 0 (%f)", xmax);
-	return 0;
-      }
-    }
-    else {
-      if (xmin > 0) {
-	xmin = 0;
-	xmax *= 2;
-      } else if (xmin < 0) {
-	xmax = 0;
-	xmin *= 2;
-      } else {
-	xmin = -1;
-	xmax = 1;
-      }
-    }
-  }
-  
-  //     take into account normalization factor
-  Healparam.allchan = allchan;
-  Double_t factor = allchan;
-  if (fHeal->GetNormFactor() > 0) factor = fHeal->GetNormFactor();
-  if (allchan) factor /= allchan;
-  if (factor == 0) factor = 1;
-  Healparam.factor = factor;
-  xmax = factor*xmax;
-  xmin = factor*xmin;
-  
-  //         For log scales, histogram coordinates are LOG10(ymin) and
-  //         LOG10(ymax). Final adjustment (if not option "Same"
-  //         or "+" for ymax) of ymax and ymin for logarithmic scale, if
-  //         Maximum and Minimum are not defined.
-  if (Healoption.Logx) {
-    if (xmin <=0 || xmax <=0) {
-      Error(where, "Cannot set Y axis to log scale");
-      return 0;
-    }
-    xmin = TMath::Log10(xmin);
-    if (!minimum) xmin += TMath::Log10(0.5);
-    xmax = TMath::Log10(xmax);
-    if (!maximum && !Healoption.Plus) xmax += TMath::Log10(2*(0.9/0.95));
-    if (!Healoption.Same) {
-      Healparam.xmin = xmin;
-      Healparam.xmax = xmax;
-    }
-    return 1;
-  }
-  
-  //         final adjustment of ymin for linear scale.
-  //         if minimum is not set , then ymin is set to zero if >0
-  //         or to ymin - margin if <0.
-  if (!minimum) {
-    if (xmin >= 0) xmin = 0;
-    else           xmin -= yMARGIN*(xmax-xmin);
-  }
-  
-  //         final adjustment of YMAXI for linear scale (if not option "Same"):
-  //         decrease histogram height to MAX% of allowed height if HMAXIM
-  //         has not been called.
-  if (!maximum && !Healoption.Plus) {
-    xmax += yMARGIN*(xmax-xmin);
-  }
-  Healparam.xmin = xmin;
-  Healparam.xmax = xmax;
-  */
-  return 1;
+  printf("*****PaintContour*****\n");  
 }
 
 //______________________________________________________________________________
@@ -1041,7 +919,7 @@ void THealPainter::PaintFrame()
   RecalculateRange();
 
   if(Healoption.Lego || Healoption.Surf || Healoption.Tri ||
-     Healoption.Contour == 14 || Healoption.Error >= 100) {
+     Healoption.Contour == 14) {
     TObject* frame = gPad->FindObject("TFrame");
     if(frame){
       gPad->GetListOfPrimitives()->Remove(frame);
@@ -1052,13 +930,34 @@ void THealPainter::PaintFrame()
 }
 
 //______________________________________________________________________________
+void THealPainter::PaintFunction(Option_t*)
+{
+  TObjOptLink* lnk = (TObjOptLink*)fFunctions->FirstLink();
+  TObject* obj;
+  
+  while(lnk){
+    obj = lnk->GetObject();
+    TVirtualPad *padsave = gPad;
+    if(obj->InheritsFrom(TF1::Class())){
+      if (obj->TestBit(TF1::kNotDraw) == 0) obj->Paint("lsame");
+    } else  {
+      obj->Paint(lnk->GetOption());
+    } // if
+    lnk = (TObjOptLink*)lnk->Next();
+    padsave->cd();
+  } // while
+}
+
+//______________________________________________________________________________
 void THealPainter::PaintLego(Option_t* option)
 {
+  printf("*****PaintLego*****\n");  
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintPalette()
 {
+  printf("*****PaintPalette*****\n");  
   THealPaletteAxis* palette = (THealPaletteAxis*)fFunctions->FindObject("palette");
   TView* view = gPad->GetView();
   if(palette){
@@ -1091,13 +990,21 @@ void THealPainter::PaintPalette()
 }
 
 //______________________________________________________________________________
+void THealPainter::PaintScatterPlot(Option_t* option)
+{
+  printf("*****PaintScatterPlot*****\n");  
+}
+
+//______________________________________________________________________________
 void THealPainter::PaintStat(Int_t dostat, TF1* fit)
 {
+  printf("*****PaintStat*****\n");  
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintSurface(Option_t* option)
 {
+  printf("*****PaintSurface*****\n");  
 }
 
 //______________________________________________________________________________
@@ -1111,23 +1018,33 @@ void THealPainter::PaintTable(Option_t* option)
   PaintFrame();
 
   if(fHeal->GetEntries() != 0 && Healoption.Axis <= 0){
-    //    if(Healoption.Scat)    PaintScatterPlot(option);
-    //    if(Healoption.Arrow)   PaintArrows(option);
-    //    if(Healoption.Box)     PaintBoxes(option);
+    if(Healoption.Scat)    PaintScatterPlot(option);
     if(Healoption.Color)   PaintColorLevels(option);
-    //    if(Healoption.Contour) PaintContour(option);
-    //    if(Healoption.Text)    PaintText(option);
-    //    if(Healoption.Error >= 100)   Paint2DErrors(option);
+    if(Healoption.Contour) PaintContour(option);
   } // if
 
   if(Healoption.Lego) PaintLego(option);
   if(Healoption.Surf && !Healoption.Contour) PaintSurface(option);
   if(Healoption.Tri) PaintTriangles(option);
   
-  if(!Healoption.Lego && !Healoption.Surf &&
-     !Healoption.Tri  && !(Healoption.Error >= 100)) PaintAxis(kFALSE);
+  if(!Healoption.Lego && !Healoption.Surf && !Healoption.Tri) PaintAxis(kFALSE);
 
   PaintTitle();
+
+  TF1* fit  = 0;
+  TIter next(fFunctions);
+  TObject *obj;
+  while((obj = next())){
+    if (obj->InheritsFrom(TF1::Class())) {
+      fit = (TF1*)obj;
+      break;
+    } // if
+  } // while
+  if(Healoption.Same != 1){
+    if (!fHeal->TestBit(THealPix::kNoStats)) {  // bit set via TH1::SetStats
+      PaintStat(gStyle->GetOptStat(), fit);
+    } // if
+  } // if
 }
 
 //______________________________________________________________________________
@@ -1238,8 +1155,9 @@ void THealPainter::PaintTitle()
 }
 
 //______________________________________________________________________________
-void THealPainter::PaintTriangles(Option_t *option)
+void THealPainter::PaintTriangles(Option_t* option)
 {
+  printf("*****PaintTriangles*****\n");  
 }
 
 //______________________________________________________________________________
@@ -1319,29 +1237,6 @@ Int_t THealPainter::TableInit()
   Healparam.xmin     = Healparam.xlowedge;
   Healparam.xmax     = fXaxis->GetBinLowEdge(last) + fXaxis->GetBinWidth(last);
   
-  //       if log scale in X, replace xmin,max by the log
-  if(Healoption.Logx){
-    //   find the first edge of a bin that is > 0
-    if(Healparam.xlowedge <= 0){
-      Healparam.xlowedge = fXaxis->GetBinUpEdge(fXaxis->FindFixBin(0.01*Healparam.xbinsize));
-      Healparam.xmin  = Healparam.xlowedge;
-    } // if
-    if(Healparam.xmin <= 0 || Healparam.xmax <= 0){
-      Error(where, "cannot set X axis to log scale");
-      return 0;
-    } // if
-    Healparam.xfirst= fXaxis->FindFixBin(Healparam.xmin);
-    if(Healparam.xfirst < first){
-      Healparam.xfirst = first;
-    } // if
-    Healparam.xlast = fXaxis->FindFixBin(Healparam.xmax);
-    if(Healparam.xlast > last){
-      Healparam.xlast = last;
-    } // if
-    Healparam.xmin  = TMath::Log10(Healparam.xmin);
-    Healparam.xmax  = TMath::Log10(Healparam.xmax);
-  }
-  
   //    -----------------  Compute Y axis parameters
   first           = fYaxis->GetFirst();
   last            = fYaxis->GetLast();
@@ -1355,28 +1250,6 @@ Int_t THealPainter::TableInit()
   Healparam.ymin     = Healparam.ylowedge;
   Healparam.ymax     = fYaxis->GetBinLowEdge(last) + fYaxis->GetBinWidth(last);
   
-  //       if log scale in Y, replace ymin,max by the log
-  if(Healoption.Logy){
-    if(Healparam.ylowedge <=0){
-      Healparam.ylowedge = fYaxis->GetBinUpEdge(fYaxis->FindFixBin(0.01*Healparam.ybinsize));
-      Healparam.ymin  = Healparam.ylowedge;
-    } // if
-    if(Healparam.ymin <=0 || Healparam.ymax <=0){
-      Error(where, "cannot set Y axis to log scale");
-      return 0;
-    } // if
-    Healparam.yfirst = fYaxis->FindFixBin(Healparam.ymin);
-    if(Healparam.yfirst < first){
-      Healparam.yfirst = first;
-    } // if
-    Healparam.ylast = fYaxis->FindFixBin(Healparam.ymax);
-    if(Healparam.ylast > last){
-      Healparam.ylast = last;
-    } // if
-    Healparam.ymin  = TMath::Log10(Healparam.ymin);
-    Healparam.ymax  = TMath::Log10(Healparam.ymax);
-  }
-  
   //    -----------------  Compute Z axis parameters
   Double_t bigp = TMath::Power(10, 32);
   zmax = -bigp;
@@ -1385,10 +1258,6 @@ Int_t THealPainter::TableInit()
   for(Int_t i = 0; i <= fHeal->GetNpix(); i++){
     Double_t c1 = fHeal->GetBinContent(i);
     zmax = TMath::Max(zmax,c1);
-    if(Healoption.Error){
-      Double_t e1 = fHeal->GetBinError(i);
-      zmax = TMath::Max(zmax, c1 + e1);
-    } // if
     zmin = TMath::Min(zmin, c1);
     allchan += c1;
   } // i
@@ -1403,7 +1272,7 @@ Int_t THealPainter::TableInit()
     } // if
     return 0;
   }
-  if(zmin >= zmax && !Healoption.Plus){
+  if(zmin >= zmax){
     if(Healoption.Logz){
       if(zmax > 0){
 	zmin = 0.001*zmax;
@@ -1444,7 +1313,7 @@ Int_t THealPainter::TableInit()
       zmin += TMath::Log10(0.5);
     } // if
     zmax = TMath::Log10(zmax);
-    if(!maximum && !Healoption.Plus){
+    if(!maximum){
       zmax += TMath::Log10(2*(0.9/0.95));
     } // if
     goto LZMIN;
@@ -1455,7 +1324,7 @@ Int_t THealPainter::TableInit()
   //         has not been called.
   //         MAX% is the value in percent which has been set in HPLSET
    //         (default is 90%).
-  if(!maximum && !Healoption.Plus){
+  if(!maximum){
     zmax += yMARGIN*(zmax - zmin);
   } // if
   

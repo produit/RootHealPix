@@ -1,4 +1,4 @@
-// $Id: THealPainter.h,v 1.2 2008/07/09 11:50:10 oxon Exp $
+// $Id: THealPainter.h,v 1.3 2008/07/11 11:02:23 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -40,6 +40,20 @@ protected:
    TCutG*         fCuts[kMaxCuts];    //Pointers to graphical cuts
 
 public:
+   enum {
+     kThetaPhi,  // X:[180, 0] Y:[0, 360]
+     kGalactic,  // X:[-90, 90] Y:[180, -180]
+     kCelestial, // X:[-90, 90] Y:[360, 0]
+     kLatLong    // X:[-90, 90] Y:[-180, 180]
+   };
+
+   enum {
+     kEquirect,// Equirectangular projection
+     kAitoff,  // Aitoff projection
+     kHammer,  // Hammer projection
+     kLambert  // Lambert azimuthal equal-area projection
+   };
+
    THealPainter();
    virtual ~THealPainter();
    virtual Int_t  DistancetoPrimitive(Int_t px, Int_t py);
@@ -52,14 +66,13 @@ public:
    virtual Int_t  MakeCuts(char* cutsopt);
    virtual void   Paint(Option_t* option = "");
    virtual void   PaintAxis(Bool_t drawGridOnly = kFALSE);
-   virtual void   PaintBarH(Option_t* option);
    virtual void   PaintColorLevels(Option_t* option);
    virtual void   PaintContour(Option_t* option);
    virtual void   PaintFrame();
-   virtual Int_t  PaintInit();
-   virtual Int_t  PaintInitH();
+   virtual void   PaintFunction(Option_t* option);
    virtual void   PaintLego(Option_t* option);
    virtual void   PaintPalette();
+   virtual void   PaintScatterPlot(Option_t* option);
    virtual void   PaintStat(Int_t dostat, TF1* fit);
    virtual void   PaintSurface(Option_t* option);
    virtual void   PaintTable(Option_t* option);

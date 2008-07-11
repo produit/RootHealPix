@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.25 2008/07/09 11:50:11 oxon Exp $
+// $Id: THealPix.cxx,v 1.26 2008/07/11 11:02:24 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -286,9 +286,11 @@ void THealPix::Build()
   fXaxis.SetName("xaxis");
   fYaxis.SetName("yaxis");
   fZaxis.SetName("zaxis");
-  fXaxis.Set(1, 0., TMath::TwoPi());
-  fYaxis.Set(1, 0., TMath::Pi());
+  fXaxis.Set(1, 0., 360.);
+  fYaxis.Set(1, 0., 180.);
   fZaxis.Set(1, 0., 1.);
+  fXaxis.SetNdivisions(408, kFALSE);
+  fYaxis.SetNdivisions(408, kFALSE);
   fXaxis.SetParent(this);
   fYaxis.SetParent(this);
   fZaxis.SetParent(this);
@@ -324,7 +326,11 @@ void THealPix::Copy(TObject& obj) const
   ((THealPix&)obj).fOrder     = fOrder;
   ((THealPix&)obj).fNside     = fNside;
   ((THealPix&)obj).fNpix      = fNpix;
-  ((THealPix&)obj).fNpFace    = fNpFace;
+  ((THealPix&)obj).fNside2    = fNside2;
+  ((THealPix&)obj).f3Nside2   = f3Nside2;
+  ((THealPix&)obj).f2over3Nside= f2over3Nside;
+  ((THealPix&)obj).f4Nside    = f4Nside;
+  ((THealPix&)obj).f2Nside    = f2Nside;
   ((THealPix&)obj).fNcap      = fNcap;
   ((THealPix&)obj).fIsDegree  = fIsDegree;
   ((THealPix&)obj).fIsNested  = fIsNested;
@@ -523,7 +529,6 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
   Double_t z0 = 2./3.;
   // Conversion [0, 2pi) => [0, 4)
   Double_t tt = THealUtil::Modulo(phi, TMath::TwoPi())/TMath::PiOver2();
-  Int_t ncap = 2*fNside*(fNside - 1);
 
   if(!fIsNested){ // RING
     if(zabs <= z0){ // Equatorial region
@@ -537,9 +542,9 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
       Int_t kshift = 1 - (ir&1); // kshift=1 if ir even, 0 otherwise
       
       Int_t ip = (jp + jm -fNside + kshift + 1)/2; // in {0,4n-1}
-      ip = THealUtil::Modulo(ip, 4*fNside);
+      ip = THealUtil::Modulo(ip, f4Nside);
       
-      return ncap + (ir - 1)*4*fNside + ip;
+      return fNcap + (ir - 1)*f4Nside + ip;
     } else { // North & South polar caps
       Double_t tp = tt - Int_t(tt);
       Double_t tmp = fNside*TMath::Sqrt(3*(1 - zabs));
@@ -643,73 +648,33 @@ void THealPix::GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const
 void THealPix::GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const
 {
   // Oribinal code is Healpix_Base::pix2ang of HEALPix C++
+  // See Gorski et al. ApJ 622 (2005) for equation numbering
 
-  Double_t fact2 = 4./fNpix;
-  Double_t fact1 = 2*fNside*fact2;
+  if(fIsNested){
+    bin = Nest2Ring(bin);
+  } // if
 
-  if(!fIsNested){ // RING
-    if(bin < fNcap){ // North Polar cap
-      Int_t iring = Int_t(.5*(1 + THealUtil::Isqrt(1 + 2*bin))); //counted from North pole
-      Int_t iphi  = (bin + 1) - 2*iring*(iring - 1);
-
-      *theta = TMath::ACos(1.0 - (iring*iring)*fact2);
-      *phi   = (iphi - .5)*TMath::Pi()/(2.*iring);
-    } else if(bin < (fNpix - fNcap)){ // Equatorial region
-      Int_t ip  = bin - fNcap;
-      Int_t iring = ip/(4*fNside) + fNside; // counted from North pole
-      Int_t iphi  = ip%(4*fNside) + 1;
-      // 1 if iring+nside is odd, 1/2 otherwise
-      Double_t fodd = ((iring + fNside)&1) ? 1 : 0.5;
-
-      Int_t nl2 = 2*fNside;
-
-      *theta = TMath::ACos((nl2 - iring)*fact1);
-      *phi   = (iphi - fodd) * TMath::Pi()/nl2;
-    } else { // South Polar cap
-      Int_t ip = fNpix - bin;
-      Int_t iring = int(0.5*(1 + THealUtil::Isqrt(2*ip - 1))); //counted from South pole
-      Int_t iphi  = 4*iring + 1 - (ip - 2*iring*(iring - 1));
-      
-      *theta = TMath::ACos(-1. + (iring*iring)*fact2);
-      *phi   = (iphi - .5)*TMath::Pi()/(2*iring);
-    } // if
-  } else { // NESTED
-    Int_t nl4 = fNside*4;
+  if(bin < fNcap){ // North Polar cap
+    Int_t i = Int_t(.5*(1 + THealUtil::Isqrt(1 + 2*bin))); //counted from North pole
+    Int_t j = (bin + 1) - 2*i*(i - 1); // (3)
+    *theta = TMath::ACos(1.0 - (i*i)/f3Nside2); // (4)
+    *phi   = (j - .5)*TMath::Pi()/(2.*i); // (5)
+  } else if(bin < (fNpix - fNcap)){ // Equatorial region
+    Int_t ip = bin - fNcap;
+    Int_t i = ip/f4Nside + fNside; // (6) counted from North pole
+    Int_t j = ip%f4Nside + 1;      // (7)
+    // 1 if i+Nside is odd, 1/2 otherwise
+    Double_t fodd = ((i + fNside)&1) ? 1 : 0.5;
     
-    Int_t face_num = bin>>(2*fOrder);
-    Int_t ipf = bin&(fNpFace - 1);
+    *theta = TMath::ACos(4./3. - i*f2over3Nside); // (8)
+    *phi   = (j - fodd) * TMath::Pi()/f2Nside;    // (9)
+  } else { // South Polar cap
+    Int_t ip = fNpix - bin;
+    Int_t i = Int_t(0.5*(1 + THealUtil::Isqrt(2*ip - 1))); //counted from South pole
+    Int_t j = 4*i + 1 - (ip - 2*i*(i - 1)); //(3)
     
-    Int_t ix, iy;
-    Pix2XY(ipf, ix, iy);
-    
-    Int_t jr = (fgJrll[face_num]<<fOrder) - ix - iy - 1;
-    
-    Int_t nr, kshift;
-    Double_t z;
-    if(jr < fNside){
-      nr = jr;
-      z = 1 - nr*nr*fact2;
-      kshift = 0;
-    } else if(jr > 3*fNside){
-      nr = nl4 - jr;
-      z = nr*nr*fact2 - 1;
-      kshift = 0;
-    } else {
-      nr = fNside;
-      z = (2*fNside - jr)*fact1;
-      kshift = (jr - fNside)&1;
-    } // if
-
-    Int_t jp = (fgJpll[face_num]*nr + ix - iy + 1 + kshift)/2;
-    if(jp > nl4){
-      jp -= nl4;
-    } // if
-    if(jp < 1){
-      jp += nl4;
-    } // if
-    
-    *theta = TMath::ACos(z);
-    *phi   = jp - (kshift + 1)*.5*(TMath::Pi()/2./nr);
+    *theta = TMath::ACos(-1. + (i*i)/f3Nside2); // (4)
+    *phi   = (j - .5)*TMath::PiOver2()/i;       // (5)
   } // if
 
   if(fIsDegree){
@@ -723,6 +688,116 @@ Double_t THealPix::GetBinContent(Int_t) const
 {
   AbstractMethod("GetBinContent");
   return 0;
+}
+
+//______________________________________________________________________________
+Int_t THealPix::GetBinVertices(Int_t bin, Double_t* x, Double_t* y) const
+{
+  if(fIsNested){
+    bin = Nest2Ring(bin);
+  } // if
+
+  if(bin < fNcap){ // North polar cap
+    Int_t i = Int_t(.5*(1 + THealUtil::Isqrt(1 + 2*bin)));
+    Int_t j = (bin + 1) - 2*i*(i - 1); // (3)
+    Double_t theta0 = TMath::RadToDeg()*TMath::ACos(1 - (i*i)/f3Nside2); // (4)
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(1 - ((i+1)*(i+1))/f3Nside2);
+    Double_t theta2 = TMath::RadToDeg()*TMath::ACos(1 - ((i-1)*(i-1))/f3Nside2);
+    //    Double_t phi0 = (j -  .5)*90./i; // (5)
+    Double_t phi1 = (j     )*90./i; // eastward
+    Double_t phi2 = (j - 1.)*90./i; // westward
+    Double_t phi3 = (j + (j - 1)/i)*90./(i + 1); // southward
+    if(i != 1){
+      Double_t phi4 = (j - (j - 1)/i - 1. )*90./(i - 1); // northward
+      x[0] = phi3; y[0] = theta1;
+      x[1] = phi1; y[1] = theta0;
+      x[2] = phi4; y[2] = theta2;
+      x[3] = phi2; y[3] = theta0;
+      return 4;
+    } else {
+      x[0] = phi3; y[0] = theta1;
+      x[1] = phi1; y[1] = theta0;
+      x[2] = phi1; y[2] = theta2;
+      x[3] = phi2; y[3] = theta2;
+      x[4] = phi2; y[4] = theta0;
+      return 5;
+    } // if
+  } else if(bin < fNcap + f4Nside){
+    Int_t i = Int_t(.5*(1 + THealUtil::Isqrt(1 + 2*bin)));
+    Int_t j = (bin + 1) - 2*i*(i - 1); // (3)
+    Double_t theta0 = TMath::RadToDeg()*TMath::ACos(1 - (i*i)/f3Nside2); // (4)
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(1 - ((i+1)*(i+1))/f3Nside2);
+    Double_t theta2 = TMath::RadToDeg()*TMath::ACos(1 - ((i-1)*(i-1))/f3Nside2);
+    Double_t phi0 = (j -  .5)*90./i; // (5)
+    Double_t phi1 = (j     )*90./i; // eastward
+    Double_t phi2 = (j - 1.)*90./i; // westward
+    Double_t phi3 = (j - (j - 1)/i - 1. )*90./(i - 1); // northward
+    x[0] = phi0; y[0] = theta1;
+    x[1] = phi1; y[1] = theta0;
+    x[2] = phi3; y[2] = theta2;
+    x[3] = phi2; y[3] = theta0;
+    return 4;
+  } else if(bin < fNpix - fNcap - f4Nside){ // Eqatorial region
+    Int_t pdash = bin - fNcap;
+    Int_t i = pdash/f4Nside + fNside; // (6)
+    Int_t j = pdash%f4Nside + 1;      // (7)
+    Double_t z = 4./3. - i*f2over3Nside; // (8)
+    Double_t theta0 = TMath::RadToDeg()*TMath::ACos(z);
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(z + f2over3Nside);
+    Double_t theta2 = TMath::RadToDeg()*TMath::ACos(z - f2over3Nside);
+
+    Double_t fodd = ((i + fNside)&1) ? 1 : 0.5;
+    Double_t phi0 = (j - fodd)*180./f2Nside; // (9)
+    Double_t phi1 = phi0 + 180./f4Nside;
+    Double_t phi2 = phi0 - 180./f4Nside;
+    x[0] = phi0; y[0] = theta1; // counter clock wise from south
+    x[1] = phi1; y[1] = theta0;
+    x[2] = phi0; y[2] = theta2;
+    x[3] = phi2; y[3] = theta0;
+    return 4;
+  } else if(bin < fNpix - fNcap){
+    Int_t ip = fNpix - bin;
+    Int_t i = Int_t(.5*(1 + THealUtil::Isqrt(2*ip - 1)));
+    Int_t j = 4*i + 1 - (ip - 2*i*(i - 1)); // (3)
+    Double_t theta0 = TMath::RadToDeg()*TMath::ACos(-1 + (i*i)/f3Nside2); // (4)
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(-1 + ((i+1)*(i+1))/f3Nside2);
+    Double_t theta2 = TMath::RadToDeg()*TMath::ACos(-1 + ((i-1)*(i-1))/f3Nside2);
+    Double_t phi0 = (j -  .5)*90./i; // (5)
+    Double_t phi1 = (j     )*90./i; // eastward
+    Double_t phi2 = (j - 1.)*90./i; // westward
+    Double_t phi3 = (j - (j - 1)/i - 1. )*90./(i - 1); // northward
+    x[0] = phi0; y[0] = theta1;
+    x[1] = phi1; y[1] = theta0;
+    x[2] = phi3; y[2] = theta2;
+    x[3] = phi2; y[3] = theta0;
+    return 4;
+  } else { // South polar cap
+    Int_t ip = fNpix - bin;
+    Int_t i = Int_t(.5*(1 + THealUtil::Isqrt(2*ip - 1)));
+    Int_t j = 4*i + 1 - (ip - 2*i*(i - 1)); // (3)
+    Double_t theta0 = TMath::RadToDeg()*TMath::ACos(-1 + (i*i)/f3Nside2); // (4)
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(-1 + ((i+1)*(i+1))/f3Nside2);
+    Double_t theta2 = TMath::RadToDeg()*TMath::ACos(-1 + ((i-1)*(i-1))/f3Nside2);
+    //    Double_t phi0 = (j -  .5)*90./i; // (5)
+    Double_t phi1 = (j     )*90./i; // eastward
+    Double_t phi2 = (j - 1.)*90./i; // westward
+    Double_t phi3 = (j + (j - 1)/i)*90./(i + 1); // southward
+    if(i != 1){
+      Double_t phi4 = (j - (j - 1)/i - 1. )*90./(i - 1); // northward
+      x[0] = phi3; y[0] = theta1;
+      x[1] = phi1; y[1] = theta0;
+      x[2] = phi4; y[2] = theta2;
+      x[3] = phi2; y[3] = theta0;
+      return 4;
+    } else {
+      x[0] = phi3; y[0] = theta1;
+      x[1] = phi1; y[1] = theta0;
+      x[2] = phi1; y[2] = theta2;
+      x[3] = phi2; y[3] = theta2;
+      x[4] = phi2; y[4] = theta0;
+      return 5;
+    } // if
+  } // if
 }
 
 //______________________________________________________________________________
@@ -752,7 +827,7 @@ void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
     return;
   } // if
 
-  Int_t northring = (ring > 2*fNside) ? 4*fNside - ring : ring;
+  Int_t northring = (ring > f2Nside) ? f4Nside - ring : ring;
 
   if(northring < fNside){
     costheta = 1 - northring*northring*4./fNpix;
@@ -761,9 +836,9 @@ void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
     shifted = kTRUE;
     startpix = 2*northring*(northring - 1);
   } else {
-    costheta = (2*fNside - northring)*(8.*fNside/fNpix);
+    costheta = (f2Nside - northring)*(8.*fNside/fNpix);
     sintheta = TMath::Sqrt(1 - costheta*costheta);
-    ringpix = 4*fNside;
+    ringpix = f4Nside;
     shifted = ((northring - fNside) & 1) == 0;
     startpix = fNcap + (northring - fNside)*ringpix;
   } // if
@@ -1099,11 +1174,16 @@ void THealPix::SetOrder(Int_t order)
   if(order < 0)  order = 0;
   if(order > 13) order = 13;
 
-  fOrder = order;
-  fNside = THealUtil::Order2Nside(fOrder);
-  fNpix  = THealUtil::Nside2Npix(fNside);
-  fNpFace= fNside*fNside;
-  fNcap  = 2*(fNpFace - fNside);
+  fOrder   = order;
+  fNside   = THealUtil::Order2Nside(fOrder);
+  fNpix    = THealUtil::Nside2Npix(fNside);
+  fNside2  = fNside*fNside;
+  f2Nside  = 2*fNside;
+  fNcap    = f2Nside*(fNside - 1);
+  f3Nside2 = 3*fNside2;
+  f2over3Nside = 2./(3.*fNside);
+  f4Nside  = 4*fNside;
+
 }
 
 //_____________________________________________________________________________
@@ -1279,7 +1359,7 @@ Double_t THealPix::GetContourLevelPad(Int_t level) const
 //_____________________________________________________________________________
 Double_t THealPix::GetMaximum(Double_t maxval) const
 {
-  if(fMinimum != -1111){
+  if(fMaximum != -1111){
     return fMaximum;
   } // if
 
@@ -1563,28 +1643,12 @@ void THealPix::SetNameTitle(const char* name, const char* title)
     fDirectory->Append(this);
   } // if
 }
-//_____________________________________________________________________________
-void THealPix::Nest2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
-{
-  // Original code is Healpix_Base::nest2xyf of HEALPix C++
-  face = pix>>(2*fOrder);
-  Pix2XY(pix & (fNpFace - 1), x, y);
-}
-
-//_____________________________________________________________________________
-Int_t THealPix::XYF2Nest(Int_t x, Int_t y, Int_t face) const
-{
-  // Original code is Healpix_Base::xyf2nest of HEALPix C++
-  return (face<<(2*fOrder)) + XY2Pix(x, y);
-}
 
 //_____________________________________________________________________________
 void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
 {
   // Original code is Healpix_Base::ring2xyf of HEALPix C++
   Int_t iring, iphi, kshift, nr;
-  
-  Int_t nl2 = 2*fNside;
   
   if(pix < fNcap){ // North Polar cap
     iring = Int_t(0.5*(1 + THealUtil::Isqrt(1 + 2*pix))); //counted from North pole
@@ -1604,15 +1668,15 @@ void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
     Int_t ip = pix - fNcap;
     if(fOrder >= 0){
       iring = (ip>>(fOrder + 2)) + fNside; // counted from North pole
-      iphi  = (ip&(4*fNside - 1)) + 1;
+      iphi  = (ip&(f4Nside - 1)) + 1;
     } else {
-      iring = (ip/(4*fNside)) + fNside; // counted from North pole
-      iphi = (ip%(4*fNside)) + 1;
+      iring = (ip/(f4Nside)) + fNside; // counted from North pole
+      iphi = (ip%(f4Nside)) + 1;
     } // if
     kshift = (iring + fNside)&1;
     nr = fNside;
     UInt_t ire = iring - fNside + 1;
-    UInt_t irm = nl2 + 2 - ire;
+    UInt_t irm = f2Nside + 2 - ire;
     Int_t ifm, ifp;
     if(fOrder >= 0){
       ifm = (iphi - ire/2 + fNside -1) >> fOrder;
@@ -1634,7 +1698,7 @@ void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
     iphi  = 4*iring + 1 - (ip - 2*iring*(iring - 1));
     kshift = 0;
     nr = iring;
-    iring = 2*nl2 - iring;
+    iring = f4Nside - iring;
     face = 8;
     Int_t tmp = iphi - 1;
     if(tmp >= 2*nr){
@@ -1648,7 +1712,7 @@ void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
 
   Int_t irt = iring - (fgJrll[face]*fNside) + 1;
   Int_t ipt = 2*iphi- fgJpll[face]*nr - kshift -1;
-  if(ipt >= nl2){
+  if(ipt >= f2Nside){
     ipt -= 8*fNside;
   } // if
 
@@ -1660,7 +1724,6 @@ void THealPix::Ring2XYF(Int_t pix, Int_t& x, Int_t& y, Int_t& face) const
 Int_t THealPix::XYF2Ring(Int_t x, Int_t y, Int_t face) const
 {
   // Original code is Healpix_Base::xyf2ring of HEALPix C++
-  Int_t nl4 = 4*fNside;
   Int_t jr = (fgJrll[face]*fNside) - x - y  - 1;
 
   Int_t nr, kshift, n_before;
@@ -1669,61 +1732,25 @@ Int_t THealPix::XYF2Ring(Int_t x, Int_t y, Int_t face) const
     n_before = 2*nr*(nr - 1);
     kshift = 0;
   } else if (jr > 3*fNside){
-    nr = nl4 - jr;
+    nr = f4Nside - jr;
     n_before = fNpix - 2*(nr + 1)*nr;
     kshift = 0;
   } else {
     nr = fNside;
-    n_before = fNcap + (jr - fNside)*nl4;
+    n_before = fNcap + (jr - fNside)*f4Nside;
     kshift = (jr - fNside)&1;
   } // if
 
   Int_t jp = (fgJpll[face]*nr + x - y + 1 + kshift)/2;
-  if(jp > nl4){
-    jp -= nl4;
+  if(jp > f4Nside){
+    jp -= f4Nside;
   } else {
     if(jp < 1){
-      jp += nl4;
+      jp += f4Nside;
     } // if
   } // if
 
   return n_before + jp - 1;
-}
-
-//_____________________________________________________________________________
-Int_t THealPix::Nest2Ring(Int_t pix) const
-{
-  // Original code is Healpix_Base::nest2ring of HEALPix C++
-  Int_t x, y, face;
-  Nest2XYF(pix, x, y, face);
-  return XYF2Ring(x, y, face);
-}
-
-//_____________________________________________________________________________
-Int_t THealPix::Ring2Nest(Int_t pix) const
-{
-  // Original code is Healpix_Base::ring2nest of HEALPix C++
-  Int_t x, y, face;
-  Ring2XYF(pix, x, y, face);
-  return XYF2Nest(x, y, face);
-}
-
-//_____________________________________________________________________________
-void THealPix::Pix2XY(Int_t pix, Int_t& x, Int_t& y) const
-{
-  // Original code is Healpix_Base::pix2xy of HEALPix C++
-  Int_t raw = (pix&0x5555) | ((pix&0x55550000)>>15);
-  x = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
-  raw = ((pix&0xaaaa)>>1) | ((pix&0xaaaa0000)>>16);
-  y = fgTable.C(raw&0xff) | (fgTable.C(raw>>8)<<4);
-}
-
-//_____________________________________________________________________________
-Int_t THealPix::XY2Pix(Int_t x, Int_t y) const
-{
-  // Original code is Healpix_Base::xy2pix of HEALPix C++
-  return fgTable.U(x&0xff) | (fgTable.U(x>>8)<<16) | (fgTable.U(y&0xff)<<1)
-    | (fgTable.U(y>>8)<<17);
 }
 
 ClassImp(THealPixF)
@@ -1816,6 +1843,12 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
       return 0;
     } // if
   } // i
+
+  Double_t total = 0;
+  for(Int_t i = 0; i  < hpf->GetNpix(); i++){
+    total += hpf->GetBinContent(i);
+  } // i
+  hpf->SetEntries(total);
 
   return hpf;
 }
@@ -2040,6 +2073,12 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
       return 0;
     } // if
   } // i
+
+  Double_t total = 0;
+  for(Int_t i = 0; i  < hpd->GetNpix(); i++){
+    total += hpd->GetBinContent(i);
+  } // i
+  hpd->SetEntries(total);
 
   return hpd;
 }
