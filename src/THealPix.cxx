@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.28 2008/07/11 23:57:49 oxon Exp $
+// $Id: THealPix.cxx,v 1.29 2008/07/12 21:18:11 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1250,12 +1250,15 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
     return kFALSE;
   } // if
 
-  char ttype[FLEN_VALUE], typechar[FLEN_VALUE],
-    tdisp[FLEN_VALUE];
+  char ttype[FLEN_VALUE], tform[FLEN_VALUE], tdisp[FLEN_VALUE];
   Long_t repeat, nulval;
   Double_t scale, zero;
     
-  fits_get_bcolparms(*fptr, colnum, ttype, head.tunit, typechar, &repeat,
+  // For example,
+  // TTYPE1  = 'diffuse'
+  // TFORM1  = '1024D'
+  // gives ttype = 'diffuse', repeat = 1024 and tform = 'D'
+  fits_get_bcolparms(*fptr, colnum, ttype, head.tunit, tform, &repeat,
 		     &scale, &zero, &nulval, tdisp, &status);
   if(!THealUtil::FitsReportError(status)){
     fits_close_file(*fptr, &status);
@@ -1284,15 +1287,16 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
 
   Int_t npix = Nside2Npix(nside);
 
-  if(npix%nrows != 0){
+  if(!(nrows*repeat == npix || nrows == npix || repeat >= 1)){
     fits_close_file(*fptr, &status);
-    std::cerr << Form("Npix(%d) is not dividable by nrows(%d).\n", npix, nrows);
+    std::cerr << Form("Incompatible type of header (Npix = %d, Nrows = %d, Repeat = %d).\n", npix, nrows, repeat);
     return kFALSE;
   } // if
 
   head.isNested = isNested;
   head.order    = order;
   head.nrows    = nrows;
+  head.repeat   = repeat;
   head.colnum   = colnum;
   
   return kTRUE;
@@ -2073,17 +2077,28 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
   THealPixF* hpf = new THealPixF(fname, colname, head.order, head.isNested);
   hpf->SetUnit(head.tunit);
 
-  Long_t npercol = hpf->GetNpix()/head.nrows;
   Int_t status = 0;
 
-  for(Int_t i = 0; i < head.nrows; i++){
-    fits_read_col(fptr, TFLOAT, head.colnum, i+1, 1, npercol, 0,
-		  &(hpf->GetArray()[i*npercol]), 0, &status);
-    if(!THealUtil::FitsReportError(status)){
-      delete hpf;
-      return 0;
-    } // if
-  } // i
+  if(head.nrows*head.repeat == hpf->GetNpix()){ // CMB-like FITS
+    for(Int_t i = 0; i < head.nrows; i++){
+      fits_read_col(fptr, TFLOAT, head.colnum, i + 1, 1, head.repeat, 0,
+		    &(hpf->GetArray()[i*head.repeat]), 0, &status);
+      if(!THealUtil::FitsReportError(status)){
+	delete hpf;
+	return 0;
+      } // if
+    } // i
+  } else if(head.nrows == hpf->GetNpix()){ // HEALPix Cube
+    // Read only the first layer
+    for(Int_t i = 0; i < head.nrows; i++){
+      fits_read_col(fptr, TFLOAT, head.colnum, i + 1, 1, 1, 0,
+		    &(hpf->GetArray()[i]), 0, &status);
+      if(!THealUtil::FitsReportError(status)){
+	delete hpf;
+	return 0;
+      } // if
+    } // i
+  } // if
 
   Double_t total = 0;
   for(Int_t i = 0; i  < hpf->GetNpix(); i++){
@@ -2303,17 +2318,28 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
   THealPixD* hpd = new THealPixD(fname, colname, head.order, head.isNested);
   hpd->SetUnit(head.tunit);
 
-  Long_t npercol = hpd->GetNpix()/head.nrows;
   Int_t status = 0;
 
-  for(Int_t i = 0; i < head.nrows; i++){
-    fits_read_col(fptr, TDOUBLE, head.colnum, i+1, 1, npercol, 0,
-		  &(hpd->GetArray()[i*npercol]), 0, &status);
-    if(!THealUtil::FitsReportError(status)){
-      delete hpd;
-      return 0;
-    } // if
-  } // i
+  if(head.nrows*head.repeat == hpd->GetNpix()){ // CMB-like FITS
+    for(Int_t i = 0; i < head.nrows; i++){
+      fits_read_col(fptr, TDOUBLE, head.colnum, i + 1, 1, head.repeat, 0,
+		    &(hpd->GetArray()[i*head.repeat]), 0, &status);
+      if(!THealUtil::FitsReportError(status)){
+	delete hpd;
+	return 0;
+      } // if
+    } // i
+  } else if(head.nrows == hpd->GetNpix()){ // HEALPix Cube
+    // Read only the first layer
+    for(Int_t i = 0; i < head.nrows; i++){
+      fits_read_col(fptr, TDOUBLE, head.colnum, i + 1, 1, 1, 0,
+		    &(hpd->GetArray()[i]), 0, &status);
+      if(!THealUtil::FitsReportError(status)){
+	delete hpd;
+	return 0;
+      } // if
+    } // i
+  } // if
 
   Double_t total = 0;
   for(Int_t i = 0; i  < hpd->GetNpix(); i++){

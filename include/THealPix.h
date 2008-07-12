@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.28 2008/07/12 09:14:10 oxon Exp $
+// $Id: THealPix.h,v 1.29 2008/07/12 21:18:10 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -53,7 +53,7 @@ protected:
 
   struct HealHeader_t {
     Int_t order, colnum;
-    Int_t nside, npix, nrows;
+    Int_t nside, npix, nrows, repeat;
     Bool_t isNested;
     char tunit[FLEN_VALUE];;
   };
@@ -105,8 +105,6 @@ protected:
   THealPix(const char* name, const char* title, Int_t order,
 	   Bool_t isNested = kFALSE);
   virtual void  Copy(TObject& hpnew) const;
-  static Bool_t ReadFitsHeader(fitsfile** fptr, const char* fname,
-			       const char* colname, HealHeader_t& head);
 
 public:
   // THealPix status bits
@@ -187,6 +185,8 @@ public:
           void     Map2Alm(THealAlm<T>& alm, const std::vector<double>& weight, Bool_t add = kFALSE) const;
   virtual void     Multiply(const THealPix* hp1);
   virtual void     Paint(Option_t* option = "");
+  static  Bool_t   ReadFitsHeader(fitsfile** fptr, const char* fname,
+				  const char* colname, HealHeader_t& head);
   virtual THealPix* Rebin(Int_t neworder, const char* newname = "");
   virtual void     Scale(Double_t c1 = 1, Option_t* option = "");
   virtual void     SetBarOffset(Float_t offset = 0.25) {fBarOffset = Short_t(1000*offset);}
