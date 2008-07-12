@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.29 2008/07/12 21:18:10 oxon Exp $
+// $Id: THealPix.h,v 1.30 2008/07/12 22:06:12 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -49,13 +49,6 @@ protected:
     THealTable();
     inline Short_t C(Int_t i) const {return fCtab[i];}
     inline Short_t U(Int_t i) const {return fUtab[i];}
-  };
-
-  struct HealHeader_t {
-    Int_t order, colnum;
-    Int_t nside, npix, nrows, repeat;
-    Bool_t isNested;
-    char tunit[FLEN_VALUE];;
   };
 
 protected:
@@ -116,6 +109,13 @@ public:
     kIsZoomed    = BIT(16), // bit set when zooming on Y axis
     kNoTitle     = BIT(17), // don't draw the histogram title
     kIsAverage   = BIT(18)  // Bin contents are average (used by Add)
+  };
+
+  struct HealHeader_t {
+    Int_t order, colnum;
+    Int_t nside, npix, nrows, repeat;
+    Bool_t isNested;
+    char tunit[FLEN_VALUE];;
   };
 
   THealPix(const THealPix&);
