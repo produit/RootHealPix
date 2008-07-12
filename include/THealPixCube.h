@@ -1,4 +1,4 @@
-// $Id: THealPixCube.h,v 1.1 2008/07/12 09:14:49 oxon Exp $
+// $Id: THealPixCube.h,v 1.2 2008/07/12 22:07:07 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -58,6 +58,8 @@ public:
 		Double_t wlow, Double_t wup, Bool_t nested = kFALSE);
   virtual ~THealPixCubeF();
 
+  THealPixCubeF* ReadFits(const char* fname, const char* colname);
+
   ClassDef(THealPixCubeF, 1);
 };
 
@@ -71,6 +73,8 @@ public:
   THealPixCubeD(const char* name, const char* title, Int_t order, Int_t nbins,
 		Double_t wlow, Double_t wup, Bool_t nested = kFALSE);
   virtual ~THealPixCubeD();
+
+  THealPixCubeD* ReadFits(const char* fname, const char* colname);
 
   ClassDef(THealPixCubeD, 1);
 };
