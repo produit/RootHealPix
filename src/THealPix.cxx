@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.30 2008/07/12 21:41:53 oxon Exp $
+// $Id: THealPix.cxx,v 1.31 2008/07/12 22:06:48 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1298,6 +1298,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
   head.nrows    = nrows;
   head.repeat   = repeat;
   head.colnum   = colnum;
+  head.npix     = npix;
   
   return kTRUE;
 }
