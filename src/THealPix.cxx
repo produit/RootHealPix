@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.29 2008/07/12 21:18:11 oxon Exp $
+// $Id: THealPix.cxx,v 1.30 2008/07/12 21:41:53 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -2100,11 +2100,13 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
     } // i
   } // if
 
-  Double_t total = 0;
+  Double_t entries = 0;
   for(Int_t i = 0; i  < hpf->GetNpix(); i++){
-    total += hpf->GetBinContent(i);
+    if(hpf->GetBinContent(i) != 0){
+      entries++;
+    } // if
   } // i
-  hpf->SetEntries(total);
+  hpf->SetEntries(entries);
 
   return hpf;
 }
@@ -2341,11 +2343,13 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
     } // i
   } // if
 
-  Double_t total = 0;
+  Double_t entries = 0;
   for(Int_t i = 0; i  < hpd->GetNpix(); i++){
-    total += hpd->GetBinContent(i);
+    if(hpd->GetBinContent(i) != 0){
+      entries++;
+    } // if
   } // i
-  hpd->SetEntries(total);
+  hpd->SetEntries(entries);
 
   return hpd;
 }
