@@ -1,4 +1,4 @@
-// $Id: LinkDef.h,v 1.15 2008/07/11 23:57:48 oxon Exp $
+// $Id: LinkDef.h,v 1.16 2008/07/12 09:14:49 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -60,6 +60,10 @@ void THealPix::Map2Alm(THealAlm<Double_t>& alm, const
 #pragma link C++ function operator-(THealPixD&, THealPixD&);
 #pragma link C++ function operator*(THealPixD&, THealPixD&);
 #pragma link C++ function operator/(THealPixD&, THealPixD&);
+
+#pragma link C++ class THealPixCube+;
+#pragma link C++ class THealPixCubeF+;
+#pragma link C++ class THealPixCubeD+;
 
 #pragma link C++ namespace THealUtil;
 #pragma link C++ function THealUtil::FitsReportError(Int_t);
