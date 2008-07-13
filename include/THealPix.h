@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.30 2008/07/12 22:06:12 oxon Exp $
+// $Id: THealPix.h,v 1.31 2008/07/13 04:26:02 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -154,10 +154,10 @@ public:
   TList*           GetListOfFunctions() const {return fFunctions;}
   virtual Double_t GetMaximum(Double_t maxval = FLT_MAX) const;
   virtual Int_t    GetMaximumBin() const;
-  virtual Int_t    GetMaximumStored() const {return fMaximum;}
+  virtual Double_t GetMaximumStored() const {return fMaximum;}
   virtual Double_t GetMinimum(Double_t minval = -FLT_MAX) const;
   virtual Int_t    GetMinimumBin() const;
-  virtual Int_t    GetMinimumStored() const {return fMinimum;}
+  virtual Double_t GetMinimumStored() const {return fMinimum;}
   virtual Int_t    GetNside() const { return fNside;}
   virtual Double_t GetNormFactor() const {return fNormFactor;}
   virtual Int_t    GetNpix() const { return fNpix;}
