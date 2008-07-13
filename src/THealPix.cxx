@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.31 2008/07/12 22:06:48 oxon Exp $
+// $Id: THealPix.cxx,v 1.32 2008/07/13 18:47:48 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1246,8 +1246,9 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
   fits_get_colnum(*fptr, CASEINSEN, (char*)colname, &colnum, &status);
   
   if(colnum == 0){
-    std::cerr << Form("Column %s not found.\n", colname);
-    return kFALSE;
+    std::cerr << Form("Column \"%s\" not found. Reading the 1st column instead.\n", colname);
+    colnum = 1;
+    status = 0;
   } // if
 
   char ttype[FLEN_VALUE], tform[FLEN_VALUE], tdisp[FLEN_VALUE];
