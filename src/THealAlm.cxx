@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.9 2008/07/14 05:03:16 oxon Exp $
+// $Id: THealAlm.cxx,v 1.10 2008/07/14 05:58:36 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -218,7 +218,7 @@ void THealAlm<T>::Alm2Map(THealPix& map) const
 		     &(dynamic_cast<THealPixD&>(map))[istart_north],
 		     &(dynamic_cast<THealPixD&>(map))[istart_south],
 		     b_north[ith-llim], b_south[ith-llim], shiftarr, work);
-      } else if(map.GetTypeString() == "F"){
+      } else if(map.GetTypeString() == "E"){
 	fft_alm2map (nph, fMmax, shifted, plan,
 		     &(dynamic_cast<THealPixF&>(map))[istart_north],
 		     &(dynamic_cast<THealPixF&>(map))[istart_south],

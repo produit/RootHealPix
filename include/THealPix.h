@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.32 2008/07/14 05:04:03 oxon Exp $
+// $Id: THealPix.h,v 1.33 2008/07/14 05:58:36 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -463,7 +463,7 @@ void THealPix::Map2Alm(THealAlm<T>& alm, const std::vector<double>& weight,
 	const Double_t* p2 = &(tmp->GetArray()[istart_south]);
 	fft_map2alm (nph, mmax, shifted, weight[ith]*normfact, plan,
 		     p1, p2,	phas_n[ith-llim], phas_s[ith-llim], shiftarr, work);
-      } else if(GetTypeString() == "F"){
+      } else if(GetTypeString() == "E"){
 	const THealPixF* tmp = dynamic_cast<const THealPixF*>(this);
 	const Float_t* p1 = &(tmp->GetArray()[istart_north]);
 	const Float_t* p2 = &(tmp->GetArray()[istart_south]);
