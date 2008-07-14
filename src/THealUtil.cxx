@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.10 2008/07/11 23:59:18 oxon Exp $
+// $Id: THealUtil.cxx,v 1.11 2008/07/14 05:59:04 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -102,12 +102,12 @@ Bool_t SaveToFits(const char* fname, const std::vector<const THealPix*>& hp)
   for(UInt_t i = 0; i < hp.size(); i++){
     if(hp[i]->GetType() == TDOUBLE){
       fits_write_col(fptr, hp[i]->GetType(), i + 1, 1, 1, hp[i]->GetNpix(),
-		     ((THealPixD*)hp[i])->GetArray(), &status);
+		     (void*)(((THealPixD*)hp[i])->GetArray()), &status);
       Long_t nrows;
       fits_get_num_rows(fptr, &nrows, &status);
     } else if(hp[i]->GetType() == TFLOAT){
       fits_write_col(fptr, hp[i]->GetType(), i + 1, 1, 1, hp[i]->GetNpix(),
-		     ((THealPixF*)hp[i])->GetArray(), &status);
+		     (void*)(((THealPixF*)hp[i])->GetArray()), &status);
       Long_t nrows;
       fits_get_num_rows(fptr, &nrows, &status);
     } else {
