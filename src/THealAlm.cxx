@@ -1,4 +1,4 @@
-// $Id: THealAlm.cxx,v 1.8 2008/07/11 23:57:49 oxon Exp $
+// $Id: THealAlm.cxx,v 1.9 2008/07/14 05:03:16 oxon Exp $
 // Author: Akira Okumura 2008/06/26
 
 /*****************************************************************************
@@ -15,12 +15,13 @@
 #include "THealPix.h"
 
 namespace {
+  /*
   void get_chunk_info (int nrings, int &nchunks, int &chunksize)
   {
     nchunks = nrings/TMath::Max(100,nrings/10) + 1;
     chunksize = (nrings+nchunks-1)/nchunks;
   }
-
+  */
 //______________________________________________________________________________
 void recalc_alm2map (int nph, int mmax, THealFFT::rfft &plan,
   std::vector<std::complex<double> > &shiftarr)
@@ -36,7 +37,7 @@ void recalc_alm2map (int nph, int mmax, THealFFT::rfft &plan,
       shiftarr[m]=-shiftarr[m-nph];
     }
   }
-
+  /*
 //______________________________________________________________________________
 void fill_work (const std::complex<double> *datain, int nph, int mmax,
   bool shifted, const std::vector<std::complex<double> > &shiftarr,
@@ -70,6 +71,7 @@ template<typename T> void fft_alm2map (int nph, int mmax, bool shifted,
   plan.backward_c(work);
   for (int m=0; m<nph; ++m) mapS[m] = work[m].real();
   }
+  */
 }
 
 templateClassImp(THealAlm)
@@ -225,6 +227,14 @@ void THealAlm<T>::Alm2Map(THealPix& map) const
     }
   }
   
+  Double_t entries = 0;
+  for(Int_t i = 0; i < map.GetNpix(); i++){
+    if(map.GetBinContent(i) != 0){
+      entries++;
+    } // if
+  } // i
+  map.SetEntries(entries);
+
   for(Int_t i = 0; i < chunksize; i++){
     delete b_north[i];
     delete b_south[i];
