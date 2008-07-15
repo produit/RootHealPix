@@ -1,4 +1,4 @@
-// $Id: THealPixCube.cxx,v 1.2 2008/07/12 22:07:08 oxon Exp $
+// $Id: THealPixCube.cxx,v 1.3 2008/07/15 06:53:03 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -53,6 +53,16 @@ THealPixCube::~THealPixCube()
   } // i
   delete [] fHeals;
   fHeals = 0;
+}
+
+//______________________________________________________________________________
+THealPix* THealPixCube::GetSlice(Int_t n) const
+{
+  if(n < 0 || n >= fN){
+    return 0;
+  } // if
+  
+  return fHeals[n];
 }
 
 //______________________________________________________________________________

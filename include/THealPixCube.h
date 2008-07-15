@@ -1,4 +1,4 @@
-// $Id: THealPixCube.h,v 1.3 2008/07/13 00:28:23 oxon Exp $
+// $Id: THealPixCube.h,v 1.4 2008/07/15 06:53:02 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -39,8 +39,9 @@ protected:
 public:
   virtual ~THealPixCube();
   
-  virtual Int_t    GetN() const {return fN;}
-          TAxis*   GetWaxis() const {return &((THealPixCube*)this)->fWaxis;}
+  virtual Int_t     GetN() const {return fN;}
+  virtual THealPix* GetSlice(Int_t n) const;
+          TAxis*    GetWaxis() const {return &((THealPixCube*)this)->fWaxis;}
   
   THealPix* operator[](Int_t n) const;
 
