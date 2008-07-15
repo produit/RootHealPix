@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.3 2008/07/11 11:02:24 oxon Exp $
+// $Id: THealPainter.cxx,v 1.4 2008/07/15 14:48:58 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -191,6 +191,7 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   if((Healoption.AxisPos == 10 || Healoption.AxisPos == 1) && (nch == 2)) Healoption.Heal = 1;
   if(Healoption.AxisPos == 11 && nch == 4) Healoption.Heal = 1;
   
+  // Coordinate options
   l = strstr(chopt, "THETAPHI");
   if(l){
     if(nch == 8) Healoption.Heal = 1;
@@ -214,6 +215,20 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     if(nch == 7) Healoption.Heal = 1;
     Healoption.System = kLatLong;
     strncpy(l, "       ", 7);
+  } // if
+
+  // Projection options
+  l = strstr(chopt, "EQUIRECT");
+  if(l){
+    if(nch == 8) Healoption.Heal = 1;
+    Healoption.Proj = kEquirect;
+    strncpy(l, "        ", 8);
+  } // if
+  l = strstr(chopt, "HAMMER");
+  if(l){
+    if(nch == 6) Healoption.Heal = 1;
+    Healoption.Proj = kHammer;
+    strncpy(l, "      ", 6);
   } // if
 
   l = strstr(chopt,"SAMES");
@@ -463,6 +478,14 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
     } // while
   } // if
   
+  if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+    fXaxis->Set(1, -180., 180.);
+    fYaxis->Set(1, -90., 90.);
+  } else if(Healoption.System == kCelestial){
+    fXaxis->Set(1, 0., 360.);
+    fYaxis->Set(1, -90., 90.);
+  } // if
+
    // Paint X axis
    Int_t ndivx = fXaxis->GetNdivisions();
    if (ndivx > 1000) {
@@ -861,13 +884,54 @@ void THealPainter::PaintColorLevels(Option_t* option)
     } // if
 
     Double_t x[5], y[5];
-    for(int i=0; i<5; i++){
-      x[i] = phi;
-      y[i] = theta;
-    } // i
-    x[0] += 0.5; x[1] += 0.; x[2] += -0.5; x[3] += 0.;
-    y[0] += 0.; y[1] += 0.5; y[2] += 0.; y[3] += -0.5;
     Int_t n = fHeal->GetBinVertices(bin, x, y);
+    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+      if(x[0] >= 180. && x[1] >= 180. && x[2] >= 180. && x[3] >= 180. &&
+	 (n == 4 || (n == 5 && x[4] >= 180.))){
+	for(Int_t j = 0; j < n; j++){
+	  x[j] -= 360.;
+	} // j
+      } // if
+      for(Int_t j = 0; j < n; j++){
+	y[j] = 90. - y[j];
+      } // j
+    } else if(Healoption.System == kCelestial){
+      for(Int_t j = 0; j < n; j++){
+	y[j] = 90. - y[j];
+      } // j
+    } // if
+
+    if(Healoption.Proj == kHammer){
+      if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+	for(Int_t j = 0; j < n; j++){
+	  Double_t lng = x[j]*TMath::DegToRad();
+	  Double_t lat = y[j]*TMath::DegToRad();
+	  x[j] = 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	  y[j] = 90.*TMath::Sin(lat)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	} // j
+      } else if(Healoption.System == kCelestial){
+	for(Int_t j = 0; j < n; j++){
+	  Double_t lng = (x[j] - 180.)*TMath::DegToRad();
+	  Double_t lat = y[j]*TMath::DegToRad();
+	  x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	  y[j] = 90.*TMath::Sin(lat)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	} // j
+      } else {
+	for(Int_t j = 0; j < n; j++){
+	  Double_t lng = (x[j] - 180.)*TMath::DegToRad();
+	  Double_t lat = (90. - y[j])*TMath::DegToRad();
+	  x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	  y[j] = 90. - 90.*TMath::Sin(lat)
+	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	} // j
+      } // if
+    } // if
+
     if(fHeal->TestBit(THealPix::kUserContour)){
       Double_t zc = fHeal->GetContourLevelPad(0);
       if (z < zc) continue;
