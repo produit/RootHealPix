@@ -1,4 +1,4 @@
-// $Id: Healoption.h,v 1.1 2008/07/12 02:28:49 oxon Exp $
+// $Id: Healoption.h,v 1.2 2008/07/15 17:45:16 oxon Exp $
 // Author: Akira Okumura 2008/07/10
 
 /*****************************************************************************
@@ -41,6 +41,8 @@ typedef struct Healoption_t {
    int HighRes;     //  = 1 to select high resolution
    int Proj;        //  = 1 to get an Aitoff projection
                     //  = 2 to get a Lambert projection
+   int Xinv;        // Inverted x axis
+   int Yinv;        // Inverted y axis
    int AxisPos;     //  Axis position
    int Zero;        // if selected with any LEGO option the empty are not drawn.
 

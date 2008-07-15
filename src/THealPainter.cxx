@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.4 2008/07/15 14:48:58 oxon Exp $
+// $Id: THealPainter.cxx,v 1.5 2008/07/15 17:45:17 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -161,6 +161,8 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   Healoption.BackBox  = 1;
   Healoption.System   = kThetaPhi;
   Healoption.Proj     = kEquirect;
+  Healoption.Xinv     = 0;
+  Healoption.Yinv     = 0;
   
   Healoption.HighRes  = 0;
   
@@ -229,6 +231,20 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     if(nch == 6) Healoption.Heal = 1;
     Healoption.Proj = kHammer;
     strncpy(l, "      ", 6);
+  } // if
+
+  // Inversed plot option
+  l = strstr(chopt, "XINV");
+  if(l){
+    if(nch == 4) Healoption.Heal = 1;
+    Healoption.Xinv = 1;
+    strncpy(l, "    ", 4);
+  } // if
+  l = strstr(chopt, "YINV");
+  if(l){
+    if(nch == 4) Healoption.Heal = 1;
+    Healoption.Yinv = 1;
+    strncpy(l, "    ", 4);
   } // if
 
   l = strstr(chopt,"SAMES");
@@ -930,6 +946,17 @@ void THealPainter::PaintColorLevels(Option_t* option)
 	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
 	} // j
       } // if
+    } // if
+
+    if(Healoption.Xinv == 1){
+      for(Int_t j = 0; j < n; j++){
+	x[j] = -x[j] + xmax + xmin;
+      } // j
+    } // if
+    if(Healoption.Yinv == 1){
+      for(Int_t j = 0; j < n; j++){
+	y[j] = -y[j] + ymax + ymin;
+      } // j
     } // if
 
     if(fHeal->TestBit(THealPix::kUserContour)){
