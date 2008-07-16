@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.5 2008/07/15 17:45:17 oxon Exp $
+// $Id: THealPainter.cxx,v 1.6 2008/07/16 23:36:40 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -232,6 +232,24 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     Healoption.Proj = kHammer;
     strncpy(l, "      ", 6);
   } // if
+  l = strstr(chopt, "LAMBERT1");
+  if(l){
+    if(nch == 8) Healoption.Heal = 1;
+    Healoption.Proj = kLambert;
+    strncpy(l, "        ", 8);
+  } // if
+  l = strstr(chopt, "LAMBERT2");
+  if(l){
+    if(nch == 8) Healoption.Heal = 1;
+    Healoption.Proj = kLambert + 10;
+    strncpy(l, "        ", 8);
+  } // if
+  l = strstr(chopt, "LAMBERT");
+  if(l){
+    if(nch == 7) Healoption.Heal = 1;
+    Healoption.Proj = kLambert;
+    strncpy(l, "       ", 7);
+  } // if
 
   // Inversed plot option
   l = strstr(chopt, "XINV");
@@ -304,26 +322,6 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   l = strstr(chopt,"AXIG"); if (l) { Healoption.Axis   = 2; strncpy(l,"    ",4); }
   l = strstr(chopt,"SCAT"); if (l) { Healoption.Scat   = 1; strncpy(l,"    ",4); }
 
-  l = strstr(chopt, "AITOFF");
-  if(l){
-    Healoption.Proj = kEquirect;
-    strncpy(l, "      ", 6);
-  } // if
-  l = strstr(chopt, "LAMBERT");
-  if(l){
-    Healoption.Proj = kLambert;
-    strncpy(l, "       ", 7);
-  } // if
-  l = strstr(chopt, "HAMMER");
-  if (l) {
-    Healoption.Proj = 2;
-    strncpy(l, "      ", 6);
-  } // if
-  l = strstr(chopt, "EQUIRECT");
-  if (l) {
-    Healoption.Proj = kEquirect;
-    strncpy(l, "       ", 7);
-  } // if
   
   if (strstr(chopt,"A"))   Healoption.Axis = -1;
   if (strstr(chopt,"][")) {Healoption.Off  =1; Healoption.Heal =1;}
@@ -405,22 +403,18 @@ void THealPainter::Paint(Option_t* option)
     return;
   } // if
 
-  if(Healoption.Proj == kLambert){
-    printf("lambert\n");
+  if(Healoption.Proj%10 == kLambert){
     fXaxis->Set(1, -1., 1.);
     fYaxis->Set(1, -1., 1.);
   } else {
     if(Healoption.System == kThetaPhi){
       fXaxis->Set(1, 0., 360.);
       fYaxis->Set(1, 0., 180.);
-    } else if(Healoption.System == kGalactic){
+    } else if(Healoption.System == kGalactic || Healoption.System == kLatLong){
       fXaxis->Set(1, -180., 180.);
       fYaxis->Set(1, -90., 90.);
     } else if(Healoption.System == kCelestial){
       fXaxis->Set(1, 0., 360.);
-      fYaxis->Set(1, -90., 90.);
-    } else if(Healoption.System == kLatLong){
-      fXaxis->Set(1, -180., 180.);
       fYaxis->Set(1, -90., 90.);
     } // if
   } // if
@@ -494,14 +488,6 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
     } // while
   } // if
   
-  if(Healoption.System == kGalactic || Healoption.System == kLatLong){
-    fXaxis->Set(1, -180., 180.);
-    fYaxis->Set(1, -90., 90.);
-  } else if(Healoption.System == kCelestial){
-    fXaxis->Set(1, 0., 360.);
-    fYaxis->Set(1, -90., 90.);
-  } // if
-
    // Paint X axis
    Int_t ndivx = fXaxis->GetNdivisions();
    if (ndivx > 1000) {
@@ -946,6 +932,27 @@ void THealPainter::PaintColorLevels(Option_t* option)
 	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
 	} // j
       } // if
+    } else if(Healoption.Proj == kLambert + 10){
+      for(Int_t j = 0; j < n; j++){
+	Double_t sint = TMath::Sin(y[j]*TMath::DegToRad());
+	Double_t z = TMath::Cos(y[j]*TMath::DegToRad());
+	Double_t tmp = (z < 1) ? sint/TMath::Sqrt(2.*(1 - z)) : 1;
+	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
+	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
+	x[j] = X;
+	y[j] = Y;
+      } // j
+    } else if(Healoption.Proj == kLambert){
+      for(Int_t j = 0; j < n; j++){
+	Double_t y_ = (180. - y[j])*TMath::DegToRad();
+	Double_t sint = TMath::Sin(y_);
+	Double_t z = TMath::Cos(y_);
+	Double_t tmp = (z < 1) ? sint/TMath::Sqrt(2.*(1 - z)) : 1;
+	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
+	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
+	x[j] = X;
+	y[j] = Y;
+      } // j
     } // if
 
     if(Healoption.Xinv == 1){
