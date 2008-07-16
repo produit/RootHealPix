@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.34 2008/07/14 05:07:28 oxon Exp $
+// $Id: THealPix.cxx,v 1.35 2008/07/16 21:36:46 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -728,7 +728,7 @@ Int_t THealPix::GetBinVertices(Int_t bin, Double_t* x, Double_t* y) const
     Int_t i = Int_t(.5*(1 + ::Isqrt(1 + 2*bin)));
     Int_t j = (bin + 1) - 2*i*(i - 1); // (3)
     Double_t theta0 = TMath::RadToDeg()*TMath::ACos(1 - (i*i)/f3Nside2); // (4)
-    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(1 - ((i+1)*(i+1))/f3Nside2);
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(4./3. - (fNside+1)*f2over3Nside);
     Double_t theta2 = TMath::RadToDeg()*TMath::ACos(1 - ((i-1)*(i-1))/f3Nside2);
     Double_t phi0 = (j -  .5)*90./i; // (5)
     Double_t phi1 = (j     )*90./i; // eastward
@@ -762,7 +762,7 @@ Int_t THealPix::GetBinVertices(Int_t bin, Double_t* x, Double_t* y) const
     Int_t i = Int_t(.5*(1 + ::Isqrt(2*ip - 1)));
     Int_t j = 4*i + 1 - (ip - 2*i*(i - 1)); // (3)
     Double_t theta0 = TMath::RadToDeg()*TMath::ACos(-1 + (i*i)/f3Nside2); // (4)
-    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(-1 + ((i+1)*(i+1))/f3Nside2);
+    Double_t theta1 = TMath::RadToDeg()*TMath::ACos(-4./3. + (fNside+1)*f2over3Nside);
     Double_t theta2 = TMath::RadToDeg()*TMath::ACos(-1 + ((i-1)*(i-1))/f3Nside2);
     Double_t phi0 = (j -  .5)*90./i; // (5)
     Double_t phi1 = (j     )*90./i; // eastward
