@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.6 2008/07/16 23:36:40 oxon Exp $
+// $Id: THealPainter.cxx,v 1.7 2008/07/17 18:17:41 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -250,6 +250,24 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     Healoption.Proj = kLambert;
     strncpy(l, "       ", 7);
   } // if
+  l = strstr(chopt, "POLAR1");
+  if(l){
+    if(nch == 6) Healoption.Heal = 1;
+    Healoption.Proj = kPolar;
+    strncpy(l, "      ", 6);
+  } // if
+  l = strstr(chopt, "POLAR2");
+  if(l){
+    if(nch == 6) Healoption.Heal = 1;
+    Healoption.Proj = kPolar + 10;
+    strncpy(l, "      ", 6);
+  } // if
+  l = strstr(chopt, "POLAR");
+  if(l){
+    if(nch == 5) Healoption.Heal = 1;
+    Healoption.Proj = kPolar;
+    strncpy(l, "     ", 5);
+  } // if
 
   // Inversed plot option
   l = strstr(chopt, "XINV");
@@ -403,9 +421,9 @@ void THealPainter::Paint(Option_t* option)
     return;
   } // if
 
-  if(Healoption.Proj%10 == kLambert){
-    fXaxis->Set(1, -1., 1.);
-    fYaxis->Set(1, -1., 1.);
+  if(Healoption.Proj%10 == kLambert || Healoption.Proj%10 == kPolar){
+    fXaxis->Set(1, -180., 180.);
+    fYaxis->Set(1, -180., 180.);
   } else {
     if(Healoption.System == kThetaPhi){
       fXaxis->Set(1, 0., 360.);
@@ -936,7 +954,7 @@ void THealPainter::PaintColorLevels(Option_t* option)
       for(Int_t j = 0; j < n; j++){
 	Double_t sint = TMath::Sin(y[j]*TMath::DegToRad());
 	Double_t z = TMath::Cos(y[j]*TMath::DegToRad());
-	Double_t tmp = (z < 1) ? sint/TMath::Sqrt(2.*(1 - z)) : 1;
+	Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
 	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
 	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
 	x[j] = X;
@@ -947,11 +965,25 @@ void THealPainter::PaintColorLevels(Option_t* option)
 	Double_t y_ = (180. - y[j])*TMath::DegToRad();
 	Double_t sint = TMath::Sin(y_);
 	Double_t z = TMath::Cos(y_);
-	Double_t tmp = (z < 1) ? sint/TMath::Sqrt(2.*(1 - z)) : 1;
+	Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
 	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
 	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
 	x[j] = X;
 	y[j] = Y;
+      } // j
+    } else if(Healoption.Proj == kPolar + 10){
+      for(Int_t j = 0; j < n; j++){
+	Double_t r = 180. - y[j];
+	Double_t phi = x[j]*TMath::DegToRad();
+	x[j] = r*TMath::Cos(phi);
+	y[j] = r*TMath::Sin(phi);
+      } // j
+    } else if(Healoption.Proj == kPolar){
+      for(Int_t j = 0; j < n; j++){
+	Double_t r = y[j];
+	Double_t phi = x[j]*TMath::DegToRad();
+	x[j] = r*TMath::Cos(phi);
+	y[j] = r*TMath::Sin(phi);
       } // j
     } // if
 

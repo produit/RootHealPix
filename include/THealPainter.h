@@ -1,4 +1,4 @@
-// $Id: THealPainter.h,v 1.3 2008/07/11 11:02:23 oxon Exp $
+// $Id: THealPainter.h,v 1.4 2008/07/17 18:17:40 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -51,7 +51,8 @@ public:
      kEquirect,// Equirectangular projection
      kAitoff,  // Aitoff projection
      kHammer,  // Hammer projection
-     kLambert  // Lambert azimuthal equal-area projection
+     kLambert, // Lambert azimuthal equal-area projection
+     kPolar    // Polar projection.
    };
 
    THealPainter();
