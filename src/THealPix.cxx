@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.35 2008/07/16 21:36:46 oxon Exp $
+// $Id: THealPix.cxx,v 1.36 2008/07/17 18:46:41 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -1012,7 +1012,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
     status = 0;
   } // if
 
-  char ttype[FLEN_VALUE], tform[FLEN_VALUE], tdisp[FLEN_VALUE];
+  char tform[FLEN_VALUE], tdisp[FLEN_VALUE];
   Long_t repeat, nulval;
   Double_t scale, zero;
     
@@ -1020,7 +1020,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
   // TTYPE1  = 'diffuse'
   // TFORM1  = '1024D'
   // gives ttype = 'diffuse', repeat = 1024 and tform = 'D'
-  fits_get_bcolparms(*fptr, colnum, ttype, head.tunit, tform, &repeat,
+  fits_get_bcolparms(*fptr, colnum, head.ttype, head.tunit, tform, &repeat,
 		     &scale, &zero, &nulval, tdisp, &status);
   if(!THealUtil::FitsReportError(status)){
     fits_close_file(*fptr, &status);
@@ -1061,7 +1061,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
   head.repeat   = repeat;
   head.colnum   = colnum;
   head.npix     = npix;
-  
+
   return kTRUE;
 }
 
@@ -1837,7 +1837,7 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
     return 0;
   } // if
 
-  THealPixF* hpf = new THealPixF(fname, colname, head.order, head.isNested);
+  THealPixF* hpf = new THealPixF(fname, head.ttype, head.order, head.isNested);
   hpf->SetUnit(head.tunit);
 
   Int_t status = 0;
@@ -2080,7 +2080,7 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
     return 0;
   } // if
 
-  THealPixD* hpd = new THealPixD(fname, colname, head.order, head.isNested);
+  THealPixD* hpd = new THealPixD(fname, head.ttype, head.order, head.isNested);
   hpd->SetUnit(head.tunit);
 
   Int_t status = 0;

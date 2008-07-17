@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.33 2008/07/14 05:58:36 oxon Exp $
+// $Id: THealPix.h,v 1.34 2008/07/17 18:46:40 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -118,7 +118,8 @@ public:
     Int_t order, colnum;
     Int_t nside, npix, nrows, repeat;
     Bool_t isNested;
-    char tunit[FLEN_VALUE];;
+    char tunit[FLEN_VALUE];
+    char ttype[FLEN_VALUE];
   };
 
   THealPix(const THealPix&);
