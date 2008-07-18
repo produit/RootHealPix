@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.36 2008/07/17 18:46:41 oxon Exp $
+// $Id: THealPix.cxx,v 1.37 2008/07/18 00:24:02 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -48,6 +48,7 @@ ClassImp(THealPix)
 //_____________________________________________________________________________
 THealPix::THealPix() : TNamed(), TAttLine(), TAttFill(), TAttMarker()
 {
+  // Default constructor
   SetOrder(0);
   fDirectory = 0;
   fFunctions = new TList;
@@ -72,6 +73,7 @@ THealPix::THealPix() : TNamed(), TAttLine(), TAttFill(), TAttMarker()
 //_____________________________________________________________________________
 THealPix::~THealPix()
 {
+  // Destructor
   if(!TestBit(kNotDeleted)){
     return;
   } // if
@@ -112,6 +114,7 @@ THealPix::THealPix(const char* name, const char* title, Int_t order,
 		   Bool_t isNested)
   : TNamed(name, title), TAttLine(), TAttFill(), TAttMarker()
 {
+  // Constructor
   fIsNested = isNested;
   fUnit     = "";
   Build();
@@ -128,18 +131,32 @@ THealPix::THealPix(const char* name, const char* title, Int_t order,
 //_____________________________________________________________________________
 THealPix::THealPix(const THealPix& hp) : TNamed(), TAttLine(), TAttFill(), TAttMarker()
 {
+  // Copy constructor
   ((THealPix&)hp).Copy(*this);
-}
-
-//_____________________________________________________________________________
-void THealPix::AddDirectory(Bool_t add)
-{
-  fgAddDirectory = add;
 }
 
 //______________________________________________________________________________
 void THealPix::Add(const THealPix* hp1, Double_t c1)
 {
+  // Performs the operation: this = this + c1*hp1
+  // if errors are defined (see THealPix::Sumw2), errors are also recalculated.
+  // Note that if h1 has Sumw2 set, Sumw2 is automatically called for this
+  // if not already set.
+  //
+  // SPECIAL CASE (Average/Efficiency HEALPixs)
+  // For HEALPixs representing averages or efficiencies, one should compute the
+  // average of the two HEALPixs and not the sum. One can mark a histogram to be
+  // an average HEALPix by setting its bit kIsAverage with
+  //    myhp.SetBit(THealPix::kIsAverage);
+  // Note that the two HELAPixs must have their kIsAverage bit set
+  //
+  // IMPORTANT NOTE1: If you intend to use the errors of this HEALPix later
+  // you should call Sumw2 before making this operation.
+  // This is particularly important if you fit the histogram after THealPix::Add
+  //
+  // IMPORTANT NOTE2: if hp1 has a normalisation factor, the normalisation
+  // factor is used, ie this = this + c1*factor*hp1
+  // Use the other THealPix::Add function if you do not want this feature
   if(!hp1){
     Error("Add", "Attempt to add a non-existing HEALPix");
     return;
@@ -192,6 +209,23 @@ void THealPix::Add(const THealPix* hp1, Double_t c1)
 //______________________________________________________________________________
 void THealPix::Add(const THealPix* hp1, const THealPix* hp2, Double_t c1, Double_t c2)
 {
+  // Replace contents of this HEALPix by the addition of hp1 and hp2
+  //
+  //   this = c1*hp1 + c2*hp2
+  // if errors are defined (see THealPix::Sumw2), errors are also recalculated
+  // Note that if hp1 or hp2 have Sumw2 set, Sumw2 is automatically called for
+  // this if not already set.
+  //
+  // SPECIAL CASE (Average/Efficiency HEALPixs)
+  // For HEALPixs representing averages or efficiencies, one should compute the
+  // average of the two HEALPixs and not the sum. One can mark a HEALPix to be
+  // an average HEALPix by setting its bit kIsAverage with
+  //    myhp.SetBit(THealPix::kIsAverage);
+  // Note that the two HEALPixs must have their kIsAverage bit set
+  //
+  // IMPORTANT NOTE: If you intend to use the errors of this HEALPix later
+  // you should call Sumw2 before making this operation.
+  // This is particularly important if you fit the HEALPix after THealPix::Add
   if(!hp1 || !hp2){
     Error("Add", "Attempt to add a non-existing HEALPix");
     return;
@@ -257,13 +291,31 @@ void THealPix::Add(const THealPix* hp1, const THealPix* hp2, Double_t c1, Double
 //______________________________________________________________________________
 void THealPix::AddBinContent(Int_t)
 {
+  // Increment bin content by 1
   AbstractMethod("AddBinContent");
 }
 
 //______________________________________________________________________________
 void THealPix::AddBinContent(Int_t, Double_t)
 {
+  // Incremetn bin content by a weight w
   AbstractMethod("AddBinContent");
+}
+
+//_____________________________________________________________________________
+void THealPix::AddDirectory(Bool_t add)
+{
+  // Stes the flag controlling the automatic add of HEALPix in memory
+  //
+  // By default (fAddDirectory = kTRUE), HEALPixs are automatically added to the
+  // list of objects in memory.
+  // Note that one HEALPix can be removed from its support directory by calling
+  // hp->SetDirectory(0) or hp->SetDirectory(dir) to add it to the list of
+  // objects in the directory dir.
+  //
+  // NOTE that this is a static function. To call it, use;
+  // THealPix::AddDirectory
+  fgAddDirectory = add;
 }
 
 //_____________________________________________________________________________
@@ -275,6 +327,7 @@ Bool_t THealPix::AddDirectoryStatus()
 //_____________________________________________________________________________
 void THealPix::Build()
 {
+  // Creates HEALPix basic data structure
   fDirectory  = 0;
   fPainter    = 0;
   fEntries    = 0;
@@ -314,6 +367,10 @@ void THealPix::Build()
 //_____________________________________________________________________________
 void THealPix::Copy(TObject& obj) const
 {
+  // Copy this HEALPix structure to obj
+  //
+  // Note that this function does not copy the list of associated functions.
+  // Use TObJect::Clone to make a full copy of a HEALPix
   if(((THealPix&)obj).fDirectory){
     // We are likely to change the hash value of this object
     // with TNamed::Copy, to keep things correct, we need to
@@ -373,6 +430,19 @@ void THealPix::Copy(TObject& obj) const
 //______________________________________________________________________________
 void THealPix::Divide(const THealPix* hp1)
 {
+  // Divide this HEALPix by hp1
+  //
+  // this = this/hp1
+  // If errors are defined (see THealPix::Sumw2), errors are also recalculated.
+  // Note that if hp1 has Sumw2 set, Sumw2 is automatically called for this
+  // if not already set.
+  // The resulting errors are calculated assuming uncorrelated HEALPixs.
+  // See the other THealPix::Divide that gives the possibility to optionaly
+  // compute Binomial errors.
+  //
+  // IMPORTANT NOTE: If you intend to use the errors of this HEALPix later
+  // you should call Sumw2 before making this operation.
+  // This is particularly important if you fit the HEALPix after THealPix::Scale
   if(!hp1){
     Error("Divide", "Attempt to divide by a non-existing HEALPix");
     return;
@@ -419,12 +489,11 @@ void THealPix::Divide(const THealPix* hp1)
 //______________________________________________________________________________
 Int_t THealPix::Fill(Double_t theta, Double_t phi)
 {
-  /*
-  if(fBuffer){
-    return BufferFill(x, y, 1);
-  } // if
-  */
-
+  // Increments bin with polar coordinates by 1.
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   Int_t bin = FindBin(theta, phi);
   fEntries++;
   AddBinContent(bin);
@@ -439,12 +508,11 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi)
 //______________________________________________________________________________
 Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
 {
-  /*
-  if(fBuffer){
-    return BufferFill(x, y, w);
-  } // if
-  */
-
+  // Increments bin with polar coordinates with a weight w.
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   Int_t bin = FindBin(theta, phi);
   fEntries++;
   AddBinContent(bin, w);
@@ -460,6 +528,11 @@ Int_t THealPix::Fill(Double_t theta, Double_t phi, Double_t w)
 //______________________________________________________________________________
 Int_t THealPix::Fill(const Double_t* x)
 {
+  // Increments bin with cartesian coordinates by 1.
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   TVector3 vec(x);
 
   if(fIsDegree){
@@ -472,6 +545,11 @@ Int_t THealPix::Fill(const Double_t* x)
 //______________________________________________________________________________
 Int_t THealPix::Fill(const Double_t* x, Double_t w)
 {
+  // Increments bin with cartesian coordinates with a weight w
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   TVector3 vec(x);
 
   if(fIsDegree){
@@ -484,6 +562,11 @@ Int_t THealPix::Fill(const Double_t* x, Double_t w)
 //______________________________________________________________________________
 Int_t THealPix::Fill(const Float_t* x)
 {
+  // Increments bin with cartesian coordinates by 1.
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   TVector3 vec(x);
 
   if(fIsDegree){
@@ -496,6 +579,11 @@ Int_t THealPix::Fill(const Float_t* x)
 //______________________________________________________________________________
 Int_t THealPix::Fill(const Float_t* x, Double_t w)
 {
+  // Increments bin with cartesian coordinates with a weight w
+  //
+  // If the storage of the sum of squares of weights has been triggered,
+  // via the function Sumw2, then the sum of the sqaures of weights is
+  // incremented by w^2 in the bin.
   TVector3 vec(x);
 
   if(fIsDegree){
@@ -508,6 +596,8 @@ Int_t THealPix::Fill(const Float_t* x, Double_t w)
 //_____________________________________________________________________________
 Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
 {
+  // Return the bin number corresponds to (theta, phi).
+  //
   // Oribinal code is Healpix_Base::ang2pix_z_phi of HEALPix C++
   if(fIsDegree){
     theta *= TMath::DegToRad();
@@ -621,6 +711,7 @@ Int_t THealPix::FindBin(Double_t theta, Double_t phi) const
 //______________________________________________________________________________
 Double_t THealPix::GetAverage() const
 {
+  // Return the average of all bin contents.
   Double_t total = 0;
   for(Int_t i = 0; i < fNpix; i++){
     total += GetBinContent(i);
@@ -632,6 +723,8 @@ Double_t THealPix::GetAverage() const
 //_____________________________________________________________________________
 Double_t THealPix::GetBinArea(Bool_t degree2) const
 {
+  // Return the solid angle of each bin. If degree2 == kTRUE, return value is
+  // in unit of degree.
   Double_t area = TMath::Pi()*4/fNpix;
   if(degree2){
     area *= TMath::RadToDeg()*TMath::RadToDeg();
@@ -649,6 +742,9 @@ void THealPix::GetBinCenter(Int_t bin, Double_t& theta, Double_t& phi) const
 //______________________________________________________________________________
 void THealPix::GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const
 {
+  // Return the coordinates of bin center. If the default unit is set to degre
+  // via THealPix::SetDegree, theta and phi are given in unit of degree.
+  //
   // Oribinal code is Healpix_Base::pix2ang of HEALPix C++
   // See Gorski et al. ApJ 622 (2005) for equation numbering
 
@@ -688,6 +784,7 @@ void THealPix::GetBinCenter(Int_t bin, Double_t* theta, Double_t* phi) const
 //______________________________________________________________________________
 Double_t THealPix::GetBinContent(Int_t) const
 {
+  // Get the content of a bin.
   AbstractMethod("GetBinContent");
   return 0;
 }
@@ -695,6 +792,9 @@ Double_t THealPix::GetBinContent(Int_t) const
 //______________________________________________________________________________
 Int_t THealPix::GetBinVertices(Int_t bin, Double_t* x, Double_t* y) const
 {
+  // Return the coordinates of four or five vertices of each bin. Their unit
+  // is always degree. The return value is the number of vertices. Five vertices
+  // are given to only eight polar bins.
   if(fIsNested){
     bin = Nest2Ring(bin);
   } // if
@@ -815,7 +915,7 @@ Bool_t THealPix::GetDefaultSumw2()
 //______________________________________________________________________________
 Double_t THealPix::GetEntries() const
 {
-  // return the current number of entries
+  // Return the current number of entries
   return fEntries;
 }
 
@@ -854,8 +954,7 @@ void THealPix::GetRingInfo(Int_t ring, Int_t& startpix, Int_t& ringpix,
 //______________________________________________________________________________
 Double_t THealPix::GetSumOfWeights() const
 {
-  //   -*-*-*-*-*-*Return the sum of weights excluding under/overflows*-*-*-*-*
-  //               ===================================================
+  // Return the sum of weights
   Double_t sum =0;
   for(Int_t i = 0; i <= fNpix; i++) {
     sum += GetBinContent(i);
@@ -866,6 +965,38 @@ Double_t THealPix::GetSumOfWeights() const
 //_____________________________________________________________________________
 void THealPix::Draw(Option_t* option)
 {
+  // Draw this HEALPix with options
+  //
+  // HEALPixs are drawn via the THealPainter class. Each HEALPix has a pointer
+  // to its own painter (to be usable in a mutithreaded program). The same
+  // HEALPix can be drawn with different options in different pads. When a
+  // HEALPix drawn in a pad is deleted, the HEALPix is automatically removed
+  // from the pad or pads where it was drawn.
+  //
+  // If a HEALPix is drawn in a pad, then filled again, the new status of the
+  // HEALPix will be automatically shown in the pad next time the pad is
+  // updated. One does not need to redraw the HEALPix.
+  //
+  // To draw the current version of a HEALPix in a pad, one can use
+  //    hp->DrawCopy();
+  // This make a clone of the HEALPix. Once the clone is drawn, the original
+  // HEALPix may be modified or deleted without affecting the aspect of the
+  // clone.
+  //
+  // By default, THealPix::Draw clears the current pad.
+  //
+  // One can use THealPix::SetMaximum and THealPix::SetMinimum to force a
+  // particular value for the maximum or the minimum scale on the plot.
+  //
+  // THealPix::UserCurrentStyle can be used to change all HEALPix graphics
+  // attributes to correspond to the current selected style. This function
+  // must be called for each HEALPix.
+  //
+  // In case of reads and draws many HEALPixs from a file, one can force the
+  // HEALPixs to inherit automatically the current graphic style by calling
+  // before gROOT->ForceStyle();
+  //
+  // See THealPainter::Paint for a description of all the drawing options.
   TString opt = option;
   opt.ToLower();
   if(gPad){
@@ -880,7 +1011,7 @@ void THealPix::Draw(Option_t* option)
       } // if
     } else {
       //the following statement is necessary in case one attempts to draw
-      //a temporary histogram already in the current pad
+      //a temporary HEALPix already in the current pad
       if(TestBit(kCanDelete)){
 	gPad->GetListOfPrimitives()->Remove(this);
       } // if
@@ -953,6 +1084,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
 				const char* colname,
 				HealHeader_t& head)
 {
+  // Read the header of a FITS file. If success, return kTRUE.
   Int_t status = 0;
 
   fits_open_file(fptr, fname, READONLY, &status);
@@ -1068,9 +1200,13 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
 //______________________________________________________________________________
 THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
 {
-  // Rebin this HEALPix
-  // -case 1 ngroup>0
-  // -case 2 ngroup<0
+  // Rebin this HEALPix to new order.
+  // 
+  // If a new name is given, return value is a pointer to new object. Otherwise
+  // this object will be rebined.
+  //
+  // Rebinning to higher resolution does not do any interpolation nor smoothing.
+  // It does only dividing the bin contents.
   if(neworder > 13 || neworder < 0){
     Error("Rebin", "Illegal value of neworder=%d",neworder);
     return 0;
@@ -1162,6 +1298,7 @@ THealPix* THealPix::Rebin(Int_t neworder, const char* newname)
 //______________________________________________________________________________
 void THealPix::SetBinContent(Int_t, Double_t)
 {
+  // Set the contents of a bin
   AbstractMethod("SetBinContent");
 }
 
@@ -1179,6 +1316,8 @@ void THealPix::SetDefaultSumw2(Bool_t sumw2)
 //______________________________________________________________________________
 void THealPix::SetOrder(Int_t order)
 {
+  // Set the order of a HEALPix. Do NOT call this function when you want to
+  // rebin the HEALPix. Use THealPix::Rebin instead.
   if(order < 0)  order = 0;
   if(order > 13) order = 13;
 
@@ -1191,18 +1330,19 @@ void THealPix::SetOrder(Int_t order)
   f3Nside2 = 3*fNside2;
   f2over3Nside = 2./(3.*fNside);
   f4Nside  = 4*fNside;
-
 }
 
 //______________________________________________________________________________
 void THealPix::SetUnit(const char* unit)
 {
+  // Set the unit of HEALPix. This value is used in saving to FITS format.
   fUnit = std::string(unit);
 }
 
 //______________________________________________________________________________
 void THealPix::Streamer(TBuffer& b)
 {
+  // Stream a class object.
   if(b.IsReading()){
     UInt_t R__s, R__c;
     Version_t R__v = b.ReadVersion(&R__s, &R__c);
@@ -1243,6 +1383,7 @@ void THealPix::Sumw2()
 //______________________________________________________________________________
 void THealPix::UseCurrentStyle()
 {
+  // Copy current attributes from/to current style.
   if(gStyle->IsReading()) {
     fXaxis.ResetAttAxis("X");
     fYaxis.ResetAttAxis("Y");
@@ -1347,8 +1488,8 @@ Double_t THealPix::GetContourLevel(Int_t level) const
 //______________________________________________________________________________
 Double_t THealPix::GetContourLevelPad(Int_t level) const
 {
-  // Return the value of contour number "level" in Pad coordinates ie: if the Pad
-  // is in log scale along Z it returns le log of the contour level value.
+  // Return the value of contour number "level" in Pad coordinates ie: if the
+  // Pad is in log scale along Z it returns le log of the contour level value.
   // see GetContour to return the array of all contour levels
   
   if(level <0 || level >= fContour.fN) return 0;
@@ -1367,6 +1508,7 @@ Double_t THealPix::GetContourLevelPad(Int_t level) const
 //______________________________________________________________________________
 Double_t THealPix::GetMaximum(Double_t maxval) const
 {
+  // Retrun maximum value smaller than maxval of bins.
   if(fMaximum != -1111){
     return fMaximum;
   } // if
@@ -1385,6 +1527,7 @@ Double_t THealPix::GetMaximum(Double_t maxval) const
 //______________________________________________________________________________
 Int_t THealPix::GetMaximumBin() const
 {
+  // Return location of bin with maximum value.
   Int_t bin = 0;
   Double_t maximum = -FLT_MAX;
   for(Int_t i = 0; i < fNpix; i++){
@@ -1401,6 +1544,7 @@ Int_t THealPix::GetMaximumBin() const
 //______________________________________________________________________________
 Double_t THealPix::GetMinimum(Double_t minval) const
 {
+  // Retrun minimum value smaller than maxval of bins.
   if(fMinimum != -1111){
     return fMinimum;
   } // if
@@ -1419,6 +1563,7 @@ Double_t THealPix::GetMinimum(Double_t minval) const
 //______________________________________________________________________________
 Int_t THealPix::GetMinimumBin() const
 {
+  // Return location of bin with minimum value.
   Int_t bin = 0;
   Double_t minimum = FLT_MAX;
   for(Int_t i = 0; i < fNpix; i++){
@@ -1435,6 +1580,7 @@ Int_t THealPix::GetMinimumBin() const
 //______________________________________________________________________________
 Int_t THealPix::GetNrows() const
 {
+  // Return number of rows used in FITS storaging.
   return fOrder < 4 ? 1 : 1024;
 }
 
@@ -1461,6 +1607,8 @@ TVirtualHealPainter* THealPix::GetPainter(Option_t* option)
 //______________________________________________________________________________
 std::string THealPix::GetSchemeString() const
 {
+  // Return ordering sheme as string.
+  // R
   if(fIsNested){
     return "NESTED";
   } else {
@@ -1495,6 +1643,24 @@ TAxis* THealPix::GetZaxis() const
 //_____________________________________________________________________________
 void THealPix::Scale(Double_t c1, Option_t* option)
 {
+  // Multiply this histogram by a constant c1
+  //
+  // this = c1*this
+  //
+  // Note that both contents and errors (if any) are scaled.
+  // This function uses the services of THealPix::Add
+  //
+  // IMPORTANT NOTE: If you intend to use the errors of this HEALPix later
+  // you should call Sumw2 before making this operation.
+  // This is particularly important if you fit the histogram after
+  // THealPix::Scale
+  //
+  // One can scale a HEALPix such that the bins integral is equal to
+  // the normalization parameter via THealPix::Scale(Double_t norm), where norm
+  // is the desired normalization divided by the integral of the histogram.
+  //
+  // If option contains "width" the bin contents and errors are divided
+  // by the bin width.
   TString opt = option;
   opt.ToLower();
   Double_t ent = fEntries;
@@ -1530,6 +1696,7 @@ void THealPix::SetBinError(Int_t bin, Double_t error)
 //______________________________________________________________________________
 void THealPix::SetBins(Int_t n)
 {
+  // Redifine the number of bins. Do NOT call this method.
   SetBinsLength(n);
   if(fSumw2.fN){
     fSumw2.Set(n);
@@ -1618,18 +1785,33 @@ void THealPix::SetDirectory(TDirectory *dir)
 //______________________________________________________________________________
 void THealPix::SetMaximum(Double_t maximum)
 {
+  // Set the maximum value for the Z axis.
+  //
+  // By default the maximum value is automatically set to the maximum bin
+  // content plus a margin of 10 per cent.
+  // Use THealPix::GetMaximum to find the maximum value of a HEALPix.
+  // Use THealPix::GetMaximumBin to find the bin with the maximum value of
+  // a HEALPix.
   fMaximum = maximum;
 }
 
 //______________________________________________________________________________
 void THealPix::SetMinimum(Double_t minimum)
 {
+  // Set the minimum value for the Z axis.
+  //
+  // By default the minimum value is automatically set to zero if all bin
+  // contents are positive or the minimum - 10 per cen otherwise.
+  // Use THealPix::GetMinimum to find the minimum value of a HEALPix.
+  // Use THealPix::GetMinimumBin to find the bin with the minimum value of
+  // a HEALPix.
   fMinimum = minimum;
 }
 
 //______________________________________________________________________________
 void THealPix::SetName(const char* name)
 {
+  // Change the name of this HEALPix.
   if(fDirectory){
     fDirectory->Remove(this);
   } // if
@@ -1642,6 +1824,7 @@ void THealPix::SetName(const char* name)
 //______________________________________________________________________________
 void THealPix::SetNameTitle(const char* name, const char* title)
 {
+  // Change the name and title of this HEALPix.
   if(fDirectory){
     fDirectory->Remove(this);
   } // if
@@ -1768,6 +1951,7 @@ ClassImp(THealPixF)
 //_____________________________________________________________________________
 THealPixF::THealPixF(): THealPix(), TArrayF()
 {
+  // Default constructor
   SetBinsLength(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -1779,6 +1963,7 @@ THealPixF::THealPixF(const char* name, const char* title, Int_t order,
 		     Bool_t isNested)
 : THealPix(name, title, order, isNested)
 {
+  // Constructor
   TArrayF::Set(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -1788,23 +1973,27 @@ THealPixF::THealPixF(const char* name, const char* title, Int_t order,
 //_____________________________________________________________________________
 THealPixF::THealPixF(const THealPixF& hpd) : THealPix(), TArrayF()
 {
+  // Copy constructor
   ((THealPixF&)hpd).Copy(*this);
 }
 
 //_____________________________________________________________________________
 THealPixF::~THealPixF()
 {
+  // Destructor
 }
 
 //_____________________________________________________________________________
 void THealPixF::Copy(TObject& newhp) const
 {
+  // Copy this to newhp
   THealPix::Copy(newhp);
 }
 
 //______________________________________________________________________________
 Double_t THealPixF::GetBinContent(Int_t bin) const
 {
+  // See convention for numbering bins in THealPix::GetBin
   if(!fArray){
     return 0;
   } // if
@@ -1818,18 +2007,27 @@ Double_t THealPixF::GetBinContent(Int_t bin) const
 //_____________________________________________________________________________
 Int_t THealPixF::GetType() const
 {
+  // Return type of content as CFITSIO type 'TFLOAT'
   return TFLOAT;
 }
 
 //_____________________________________________________________________________
 std::string THealPixF::GetTypeString() const
 {
+  // Return type of content as FITS type string 'E'
   return "E";
 }
 
 //______________________________________________________________________________
 THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
 {
+  // Read from FITS file
+  //
+  // If the given colname is found in the FITS file 'fname', the title of
+  // returned HEALPix is set to colname.
+  //
+  // If the given colname is not found, automatically read the first column.
+  // The title is set to the found column name instead.
   THealPix::HealHeader_t head;
   fitsfile* fptr = 0;
 
@@ -1877,6 +2075,7 @@ THealPixF* THealPixF::ReadFits(const char* fname, const char* colname)
 //_____________________________________________________________________________
 void THealPixF::SetBinContent(Int_t bin, Double_t content)
 {
+  // Set bin content.
   if(bin < 0 || fNpix <= 0){
     return;
   } // if
@@ -1899,8 +2098,7 @@ void THealPixF::SetBinsLength(Int_t n)
 //______________________________________________________________________________
 THealPixF& THealPixF::operator=(const THealPixF& hp1)
 {
-   // Operator =
-
+  // Operator =
   if(this != &hp1){
     ((THealPixF&)hp1).Copy(*this);
   } // if
@@ -1952,56 +2150,51 @@ THealPixF THealPixF::__sub__(const THealPixF& hp1) const
 //______________________________________________________________________________
 THealPixF operator*(Double_t c1, const THealPixF& hp1)
 {
-   // Operator *
-
-   THealPixF hpnew = hp1;
-   hpnew.Scale(c1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator *
+  THealPixF hpnew = hp1;
+  hpnew.Scale(c1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixF operator+(const THealPixF& hp1, const THealPixF& hp2)
 {
-   // Operator +
-
-   THealPixF hpnew = hp1;
-   hpnew.Add(&hp2, 1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator +
+  THealPixF hpnew = hp1;
+  hpnew.Add(&hp2, 1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixF operator-(const THealPixF& hp1, const THealPixF& hp2)
 {
-   // Operator -
-
-   THealPixF hpnew = hp1;
-   hpnew.Add(&hp2, -1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator -
+  THealPixF hpnew = hp1;
+  hpnew.Add(&hp2, -1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixF operator*(const THealPixF& hp1, const THealPixF& hp2)
 {
-   // Operator *
-
-   THealPixF hpnew = hp1;
-   hpnew.Multiply(&hp2);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator *
+  THealPixF hpnew = hp1;
+  hpnew.Multiply(&hp2);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixF operator/(const THealPixF& hp1, const THealPixF& hp2)
 {
-   // Operator /
-
-   THealPixF hpnew = hp1;
-   hpnew.Divide(&hp2);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator /
+  THealPixF hpnew = hp1;
+  hpnew.Divide(&hp2);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 ClassImp(THealPixD)
@@ -2011,6 +2204,7 @@ ClassImp(THealPixD)
 //_____________________________________________________________________________
 THealPixD::THealPixD(): THealPix(), TArrayD()
 {
+  // Default constructor
   SetBinsLength(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -2022,6 +2216,7 @@ THealPixD::THealPixD(const char* name, const char* title, Int_t order,
 		     Bool_t isNested)
 : THealPix(name, title, order, isNested)
 {
+  // Constructor
   TArrayD::Set(fNpix);
   if(fgDefaultSumw2){
     Sumw2();
@@ -2031,23 +2226,27 @@ THealPixD::THealPixD(const char* name, const char* title, Int_t order,
 //_____________________________________________________________________________
 THealPixD::THealPixD(const THealPixD& hpd) : THealPix(), TArrayD()
 {
+  // Copy constructor
   ((THealPixD&)hpd).Copy(*this);
 }
 
 //_____________________________________________________________________________
 THealPixD::~THealPixD()
 {
+  // Destructor
 }
 
 //_____________________________________________________________________________
 void THealPixD::Copy(TObject& newhp) const
 {
+  // Copy this to newhp
   THealPix::Copy(newhp);
 }
 
 //______________________________________________________________________________
 Double_t THealPixD::GetBinContent(Int_t bin) const
 {
+  // See convention for numbering bins in THealPix::GetBin
   if(!fArray){
     return 0;
   } // if
@@ -2061,18 +2260,27 @@ Double_t THealPixD::GetBinContent(Int_t bin) const
 //_____________________________________________________________________________
 Int_t THealPixD::GetType() const
 {
+  // Return type of content as CFITSIO type 'TDOUBLE'
   return TDOUBLE;
 }
 
 //_____________________________________________________________________________
 std::string THealPixD::GetTypeString() const
 {
+  // Return type of content as FITS type string 'D'
   return "D";
 }
 
 //______________________________________________________________________________
 THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
 {
+  // Read from FITS file
+  //
+  // If the given colname is found in the FITS file 'fname', the title of
+  // returned HEALPix is set to colname.
+  //
+  // If the given colname is not found, automatically read the first column.
+  // The title is set to the found column name instead.
   THealPix::HealHeader_t head;
   fitsfile* fptr = 0;
 
@@ -2120,6 +2328,7 @@ THealPixD* THealPixD::ReadFits(const char* fname, const char* colname)
 //_____________________________________________________________________________
 void THealPixD::SetBinContent(Int_t bin, Double_t content)
 {
+  // Set bin content.
   if(bin < 0 || fNpix <= 0){
     return;
   } // if
@@ -2142,8 +2351,7 @@ void THealPixD::SetBinsLength(Int_t n)
 //______________________________________________________________________________
 THealPixD& THealPixD::operator=(const THealPixD& hp1)
 {
-   // Operator =
-
+  // Operator =
   if(this != &hp1){
     ((THealPixD&)hp1).Copy(*this);
   } // if
@@ -2195,55 +2403,50 @@ THealPixD THealPixD::__sub__(const THealPixD& hp1) const
 //______________________________________________________________________________
 THealPixD operator*(Double_t c1, const THealPixD& hp1)
 {
-   // Operator *
-
-   THealPixD hpnew = hp1;
-   hpnew.Scale(c1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator *
+  THealPixD hpnew = hp1;
+  hpnew.Scale(c1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixD operator+(const THealPixD& hp1, const THealPixD& hp2)
 {
-   // Operator +
-
-   THealPixD hpnew = hp1;
-   hpnew.Add(&hp2, 1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator +
+  THealPixD hpnew = hp1;
+  hpnew.Add(&hp2, 1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixD operator-(const THealPixD& hp1, const THealPixD& hp2)
 {
-   // Operator -
-
-   THealPixD hpnew = hp1;
-   hpnew.Add(&hp2, -1);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator -
+  THealPixD hpnew = hp1;
+  hpnew.Add(&hp2, -1);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixD operator*(const THealPixD& hp1, const THealPixD& hp2)
 {
-   // Operator *
-
-   THealPixD hpnew = hp1;
-   hpnew.Multiply(&hp2);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator *
+  THealPixD hpnew = hp1;
+  hpnew.Multiply(&hp2);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 
 //______________________________________________________________________________
 THealPixD operator/(const THealPixD& hp1, const THealPixD& hp2)
 {
-   // Operator /
-
-   THealPixD hpnew = hp1;
-   hpnew.Divide(&hp2);
-   hpnew.SetDirectory(0);
-   return hpnew;
+  // Operator /
+  THealPixD hpnew = hp1;
+  hpnew.Divide(&hp2);
+  hpnew.SetDirectory(0);
+  return hpnew;
 }
 

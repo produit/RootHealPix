@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.7 2008/07/17 18:17:41 oxon Exp $
+// $Id: THealPainter.cxx,v 1.8 2008/07/18 00:24:02 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -410,6 +410,32 @@ Int_t THealPainter::MakeCuts(char* choptin)
 //______________________________________________________________________________
 void THealPainter::Paint(Option_t* option)
 {
+  // Paint HEALPix
+  //
+  // List of Options:
+  // "COL"  Colored polygon is drawn at each bin.
+  // "COLZ" Same as "COL". In addition color palette is drawn.
+  // "A" Suppress the axis
+  // "SAME" Superimpose on previous picture in the same pad.
+  //
+  // "EQUIRECT" Use equirect projection. (default)
+  // "POLAR1" Use polar projection viewed from the zenith. +X and +Y are phi=0
+  //          and phi=90 respectively.
+  // "POLAR2" Use polar projection viewed from the nadir. +X and +Y are phi=0
+  //          and phi=90 respectively.
+  // "POLAR"  Same as "POLAR1"
+  // "LAMBERT1" User Lambert-azimuthal projection viewed from the zenith.
+  // "LAMBERT2" User Lambert-azimuthal projection viewed from the nadir.
+  // "LAMBERT"  Same as "LAMBERT1"
+  // "HAMMER" Use Hammer-Aitoff projecton.
+  //
+  // "THETAPHI"  The range of X/Y axes are set to (0, 360)/(0, 180) (default)
+  // "GALACTIC"  The range of X/Y axes are set to (-180, 180)/(-90, 90)
+  // "CELESTIAL" The range of X/Y axes are set to (0, 360)/(-90, 90)
+  // "LATLONG"   The range of X/Y axes are set to (-180, 180)/(-90, 90)
+  //
+  // "XDIV" Draw the contents inverted along to X axis
+  // "YDIV" Draw the contents inverted along to Y axis
   printf("*****Paint*****\n");
   THealPix* oldheal = gCurrentHeal;
   gCurrentHeal = fHeal;
