@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.34 2008/07/17 18:46:40 oxon Exp $
+// $Id: THealPix.h,v 1.35 2008/07/18 00:32:19 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -133,6 +133,7 @@ public:
   static  Bool_t   AddDirectoryStatus();
   virtual void     Divide(const THealPix* hp1);
   virtual void     Draw(Option_t* option = "");
+  virtual THealPix* DrawCopy(Option_t* option = "") const;
   virtual Int_t    Fill(Double_t theta, Double_t phi);
   virtual Int_t    Fill(Double_t theta, Double_t phi, Double_t w);
   virtual Int_t    Fill(const Double_t* x);
@@ -337,6 +338,7 @@ public:
   virtual void       AddBinContent(Int_t bin, Double_t w)
                                   {fArray[bin] += Float_t(w);}
   virtual void       Copy(TObject& newhp) const;
+  virtual THealPix*  DrawCopy(Option_t* option = "") const;
   virtual Double_t   GetBinContent(Int_t bin) const;
   virtual Int_t      GetType() const;
   virtual std::string GetTypeString() const;
@@ -383,6 +385,7 @@ public:
   virtual void       AddBinContent(Int_t bin, Double_t w)
                                   {fArray[bin] += Double_t(w);}
   virtual void       Copy(TObject& newhp) const;
+  virtual THealPix*  DrawCopy(Option_t* option = "") const;
   virtual Double_t   GetBinContent(Int_t bin) const;
   virtual Int_t      GetType() const;
   virtual std::string GetTypeString() const;

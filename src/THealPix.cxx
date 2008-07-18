@@ -1,4 +1,4 @@
-// $Id: THealPix.cxx,v 1.37 2008/07/18 00:24:02 oxon Exp $
+// $Id: THealPix.cxx,v 1.38 2008/07/18 00:32:19 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -988,7 +988,7 @@ void THealPix::Draw(Option_t* option)
   // One can use THealPix::SetMaximum and THealPix::SetMinimum to force a
   // particular value for the maximum or the minimum scale on the plot.
   //
-  // THealPix::UserCurrentStyle can be used to change all HEALPix graphics
+  // THealPix::UseCurrentStyle can be used to change all HEALPix graphics
   // attributes to correspond to the current selected style. This function
   // must be called for each HEALPix.
   //
@@ -1023,6 +1023,20 @@ void THealPix::Draw(Option_t* option)
     } // if
   }
   AppendPad(option);
+}
+
+//______________________________________________________________________________
+THealPix* THealPix::DrawCopy(Option_t*) const
+{
+  // Copy this HEALPix and Draw in the current pad.
+  //
+  // Once the HEALPix is drawn into the pad, any further modification
+  // using graphics input will be made on the copy of the HEALPix,
+  // and not to the original object.
+  //
+  // See Draw for the list of options
+  AbstractMethod("DrawCopy");
+  return 0;
 }
 
 //______________________________________________________________________________
@@ -1991,6 +2005,22 @@ void THealPixF::Copy(TObject& newhp) const
 }
 
 //______________________________________________________________________________
+THealPix* THealPixF::DrawCopy(Option_t* option) const
+{
+  // Draw copy.
+  TString opt = option;
+  opt.ToLower();
+  if(gPad && !opt.Contains("same")){
+    gPad->Clear();
+  } // if
+  THealPixF* newhpf = (THealPixF*)Clone();
+  newhpf->SetDirectory(0);
+  newhpf->SetBit(kCanDelete);
+  newhpf->AppendPad(option);
+  return newhpf;
+}
+
+//______________________________________________________________________________
 Double_t THealPixF::GetBinContent(Int_t bin) const
 {
   // See convention for numbering bins in THealPix::GetBin
@@ -2241,6 +2271,22 @@ void THealPixD::Copy(TObject& newhp) const
 {
   // Copy this to newhp
   THealPix::Copy(newhp);
+}
+
+//______________________________________________________________________________
+THealPix* THealPixD::DrawCopy(Option_t* option) const
+{
+  // Draw copy.
+  TString opt = option;
+  opt.ToLower();
+  if(gPad && !opt.Contains("same")){
+    gPad->Clear();
+  } // if
+  THealPixD* newhpf = (THealPixD*)Clone();
+  newhpf->SetDirectory(0);
+  newhpf->SetBit(kCanDelete);
+  newhpf->AppendPad(option);
+  return newhpf;
 }
 
 //______________________________________________________________________________
