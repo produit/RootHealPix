@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.9 2008/07/28 18:33:41 oxon Exp $
+// $Id: THealPainter.cxx,v 1.10 2008/07/28 18:39:48 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -947,18 +947,6 @@ void THealPainter::PaintColorLevels(Option_t* option)
       } // j
     } // if
 
-    Bool_t isInsidePlotArea = kFALSE;
-    for(Int_t i = 0; i < n; i++){
-      if(xmin <= x[i] && x[i] <= xmax && ymin <= y[i] && y[i] <= ymax){
-	isInsidePlotArea |= kTRUE;
-	break;
-      } // if
-    } // i
-    if(!isInsidePlotArea){
-      // do not plot pixels outside the plot area
-      continue;
-    } // if
-
     if(Healoption.Proj == kHammer){
       if(Healoption.System == kGalactic || Healoption.System == kLatLong){
 	for(Int_t j = 0; j < n; j++){
@@ -1034,6 +1022,18 @@ void THealPainter::PaintColorLevels(Option_t* option)
       for(Int_t j = 0; j < n; j++){
 	y[j] = -y[j] + ymax + ymin;
       } // j
+    } // if
+
+    Bool_t isInsidePlotArea = kFALSE;
+    for(Int_t i = 0; i < n; i++){
+      if(xmin <= x[i] && x[i] <= xmax && ymin <= y[i] && y[i] <= ymax){
+	isInsidePlotArea |= kTRUE;
+	break;
+      } // if
+    } // i
+    if(!isInsidePlotArea){
+      // do not plot pixels outside the plot area
+      continue;
     } // if
 
     if(fHeal->TestBit(THealPix::kUserContour)){
