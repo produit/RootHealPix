@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.8 2008/07/18 00:24:02 oxon Exp $
+// $Id: THealPainter.cxx,v 1.9 2008/07/28 18:33:41 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -945,6 +945,18 @@ void THealPainter::PaintColorLevels(Option_t* option)
       for(Int_t j = 0; j < n; j++){
 	y[j] = 90. - y[j];
       } // j
+    } // if
+
+    Bool_t isInsidePlotArea = kFALSE;
+    for(Int_t i = 0; i < n; i++){
+      if(xmin <= x[i] && x[i] <= xmax && ymin <= y[i] && y[i] <= ymax){
+	isInsidePlotArea |= kTRUE;
+	break;
+      } // if
+    } // i
+    if(!isInsidePlotArea){
+      // do not plot pixels outside the plot area
+      continue;
     } // if
 
     if(Healoption.Proj == kHammer){
