@@ -1,4 +1,4 @@
-// $Id: THealPixCube.h,v 1.4 2008/07/15 06:53:02 oxon Exp $
+// $Id: THealPixCube.h,v 1.5 2009/01/05 04:43:46 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -41,6 +41,8 @@ public:
   
   virtual Int_t     GetN() const {return fN;}
   virtual THealPix* GetSlice(Int_t n) const;
+  virtual Int_t     GetType() const = 0;
+  virtual std::string GetTypeString() const = 0;
           TAxis*    GetWaxis() const {return &((THealPixCube*)this)->fWaxis;}
   
   THealPix* operator[](Int_t n) const;
@@ -59,6 +61,8 @@ public:
 		Double_t wlow, Double_t wup, Bool_t nested = kFALSE);
   virtual ~THealPixCubeF();
 
+  virtual Int_t         GetType() const;
+  virtual std::string GetTypeString() const;
   static THealPixCubeF* ReadFits(const char* fname, const char* colname);
 
   ClassDef(THealPixCubeF, 1);
@@ -75,6 +79,8 @@ public:
 		Double_t wlow, Double_t wup, Bool_t nested = kFALSE);
   virtual ~THealPixCubeD();
 
+  virtual Int_t         GetType() const;
+  virtual std::string GetTypeString() const;
   static THealPixCubeD* ReadFits(const char* fname, const char* colname);
 
   ClassDef(THealPixCubeD, 1);

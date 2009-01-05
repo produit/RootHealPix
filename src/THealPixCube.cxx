@@ -1,4 +1,4 @@
-// $Id: THealPixCube.cxx,v 1.3 2008/07/15 06:53:03 oxon Exp $
+// $Id: THealPixCube.cxx,v 1.4 2009/01/05 04:43:45 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -97,6 +97,20 @@ THealPixCubeF::THealPixCubeF(const char* name, const char* title, Int_t order,
 }
 
 //______________________________________________________________________________
+Int_t THealPixCubeF::GetType() const
+{
+  // Return type of content as CFITSIO type 'TFLOAT'
+  return TFLOAT;
+}
+
+//_____________________________________________________________________________
+std::string THealPixCubeF::GetTypeString() const
+{
+  // Return type of content as FITS type string 'E'
+  return "E";
+}
+
+//______________________________________________________________________________
 THealPixCubeF* THealPixCubeF::ReadFits(const char* fname, const char* colname)
 {
   THealPix::HealHeader_t head;
@@ -176,6 +190,20 @@ THealPixCubeD::THealPixCubeD(const char* name, const char* title, Int_t order,
   for(Int_t i = 0; i < fN; i++){
     fHeals[i] = new THealPixD(Form("%s%d", name, i), title, order, nested);
   } // i
+}
+
+//______________________________________________________________________________
+Int_t THealPixCubeD::GetType() const
+{
+  // Return type of content as CFITSIO type 'TDOUBLE'
+  return TDOUBLE;
+}
+
+//_____________________________________________________________________________
+std::string THealPixCubeD::GetTypeString() const
+{
+  // Return type of content as FITS type string 'D'
+  return "D";
 }
 
 //______________________________________________________________________________
