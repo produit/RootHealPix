@@ -1,4 +1,4 @@
-// $Id: THealUtil.h,v 1.10 2009/01/05 06:03:24 oxon Exp $
+// $Id: THealUtil.h,v 1.11 2009/01/12 20:51:24 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -24,6 +24,7 @@
 #include "TMath.h"
 
 class THealPix;
+class THealPixCube;
 
 namespace THealUtil {
   Bool_t          FitsReportError(Int_t status);

@@ -1,4 +1,4 @@
-// $Id: THealPix.h,v 1.35 2008/07/18 00:32:19 oxon Exp $
+// $Id: THealPix.h,v 1.36 2009/01/12 20:51:24 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -231,7 +231,7 @@ public:
   static  Int_t    Nside2Npix(Int_t nside) {return 12*nside*nside;}
   static  Int_t    Order2Nside(Int_t order) {return 1<<order;}
 
-  ClassDef(THealPix, 1);
+  ClassDef(THealPix, 1); // 2D HEALPix histogram
 };
 
 //______________________________________________________________________________
@@ -361,7 +361,7 @@ public:
   virtual THealPixF  __rmul__(Double_t c1) const;
   virtual THealPixF  __sub__(const THealPixF& hp1) const;
 
-  ClassDef(THealPixF, 1);
+  ClassDef(THealPixF, 1); // 2D HEALPix histogram (one float per channel)
 };
 
 THealPixF operator*(Double_t c1, const THealPixF &hp1);
@@ -408,7 +408,7 @@ public:
   virtual THealPixD  __rmul__(Double_t c1) const;
   virtual THealPixD  __sub__(const THealPixD& hp1) const;
 
-  ClassDef(THealPixD, 1);
+  ClassDef(THealPixD, 1); // 2D HEALPix histogram (one double per channel)
 };
 
 THealPixD operator*(Double_t c1, const THealPixD& hp1);

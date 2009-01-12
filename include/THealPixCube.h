@@ -1,4 +1,4 @@
-// $Id: THealPixCube.h,v 1.5 2009/01/05 04:43:46 oxon Exp $
+// $Id: THealPixCube.h,v 1.6 2009/01/12 20:51:24 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -47,7 +47,7 @@ public:
   
   THealPix* operator[](Int_t n) const;
 
-  ClassDef(THealPixCube, 1);
+  ClassDef(THealPixCube, 1); // 3D HEALPix histogram
 };
 
 //______________________________________________________________________________
@@ -65,7 +65,7 @@ public:
   virtual std::string GetTypeString() const;
   static THealPixCubeF* ReadFits(const char* fname, const char* colname);
 
-  ClassDef(THealPixCubeF, 1);
+  ClassDef(THealPixCubeF, 1); // 3D HEALPix histogram (one float per channel)
 };
 
 //______________________________________________________________________________
@@ -83,7 +83,7 @@ public:
   virtual std::string GetTypeString() const;
   static THealPixCubeD* ReadFits(const char* fname, const char* colname);
 
-  ClassDef(THealPixCubeD, 1);
+  ClassDef(THealPixCubeD, 1); // 3D HEALPix histogram (one double per channel)
 };
 
 #endif // T_HEAL_PIX_CUBE

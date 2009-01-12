@@ -1,4 +1,4 @@
-// $Id: THealPixCube.cxx,v 1.4 2009/01/05 04:43:45 oxon Exp $
+// $Id: THealPixCube.cxx,v 1.5 2009/01/12 20:51:25 oxon Exp $
 // Author: Akira Okumura 2008/07/11
 
 /*****************************************************************************
@@ -74,6 +74,8 @@ THealPix* THealPixCube::operator[](Int_t n) const
 
   return fHeals[n];
 }
+
+ClassImp(THealPixCubeF)
 
 //______________________________________________________________________________
 THealPixCubeF::THealPixCubeF(): THealPixCube()
@@ -170,6 +172,8 @@ THealPixCubeF* THealPixCubeF::ReadFits(const char* fname, const char* colname)
 
   return hpcf;
 }
+
+ClassImp(THealPixCubeD)
 
 //______________________________________________________________________________
 THealPixCubeD::THealPixCubeD(): THealPixCube()
