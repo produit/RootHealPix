@@ -1,4 +1,4 @@
-// $Id: THealUtil.cxx,v 1.12 2009/01/05 06:03:25 oxon Exp $
+// $Id: THealUtil.cxx,v 1.13 2009/04/10 01:46:57 oxon Exp $
 // Author: Akira Okumura 2008/06/20
 
 /*****************************************************************************
@@ -120,7 +120,7 @@ Bool_t SaveToFits(const char* fname, const THealPixCube* hpc)
 Bool_t SaveToFits(const char* fname, const std::vector<THealPix*>& hp)
 {
   std::vector<const THealPix*> vec;
-  for(UInt_t i = 0; i < vec.size(); i++){
+  for(UInt_t i = 0; i < hp.size(); i++){
     vec.push_back(hp[i]);
   } // i
 
