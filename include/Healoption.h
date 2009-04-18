@@ -1,4 +1,4 @@
-// $Id: Healoption.h,v 1.2 2008/07/15 17:45:16 oxon Exp $
+// $Id: Healoption.h,v 1.3 2009/04/18 05:52:35 oxon Exp $
 // Author: Akira Okumura 2008/07/10
 
 /*****************************************************************************
@@ -25,6 +25,7 @@ typedef struct Healoption_t {
    int Keep;        // "K"  The status of the HEALPix is kept in memory
    int Same;        // "S"  Histogram is plotted in the current PAD.
    int Update;      // "U"  Update histogram previously plotted with option K
+   int Box;         // "BOX"   Draw 2D plot with proportional Boxes.
    int Color;       // "COL"   Draw 2D plot with Colored boxes.
    int Contour;     // "CONT"  Draw 2D plot as a Contour plot.
    int Func;        // "FUNC"  Draw only the function (for example in case of fit).
@@ -49,7 +50,7 @@ typedef struct Healoption_t {
    // the following structure members are set to 1 if the corresponding option
    // in the current style is selected.
    int Logz;        // log scale in Z. Also set by histogram option
-
+	
 } Healoption_t;
 
 #endif // HEAL_OPTION

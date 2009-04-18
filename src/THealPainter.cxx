@@ -1,4 +1,4 @@
-// $Id: THealPainter.cxx,v 1.10 2008/07/28 18:39:48 oxon Exp $
+// $Id: THealPainter.cxx,v 1.11 2009/04/18 05:52:36 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -37,6 +37,7 @@ static Healoption_t Healoption;
 static Hparam_t  Healparam;
 
 static const Int_t kNMAX = 2000;
+static const Double_t d2r = TMath::DegToRad();
 
 ClassImp(THealPainter)
 
@@ -152,7 +153,7 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   Healoption.Axis = Healoption.Heal    = Healoption.Same    = Healoption.Func =
   Healoption.Scat = Healoption.Color   = Healoption.Contour = Healoption.Logz =
   Healoption.Lego = Healoption.Surf    = Healoption.Off     = Healoption.Tri  =
-  Healoption.AxisPos = 0;
+  Healoption.AxisPos = Healoption.Box = 0;
   
   //    special 2D options
   Healoption.List     = 0;
@@ -332,6 +333,7 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     if (l[4] == '4') { Healoption.Contour = 14; l[4] = ' '; }
     if (l[4] == '5') { Healoption.Contour = 15; l[4] = ' '; }
   }
+  l = strstr(chopt,"BOX" ); if (l) { Healoption.Box    = 1; strncpy(l,"   ",3); }
   l = strstr(chopt,"COLZ"); if (l) { Healoption.Color  = 2; strncpy(l,"    ",4); Healoption.Scat = 0; Healoption.Zscale = 1;}
   l = strstr(chopt,"COL" ); if (l) { Healoption.Color  = 1; strncpy(l,"   ", 3); Healoption.Scat = 0; }
   l = strstr(chopt,"FUNC"); if (l) { Healoption.Func   = 2; strncpy(l,"    ",4); Healoption.Heal = 0; }
@@ -339,7 +341,6 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
   l = strstr(chopt,"AXIS"); if (l) { Healoption.Axis   = 1; strncpy(l,"    ",4); }
   l = strstr(chopt,"AXIG"); if (l) { Healoption.Axis   = 2; strncpy(l,"    ",4); }
   l = strstr(chopt,"SCAT"); if (l) { Healoption.Scat   = 1; strncpy(l,"    ",4); }
-
   
   if (strstr(chopt,"A"))   Healoption.Axis = -1;
   if (strstr(chopt,"][")) {Healoption.Off  =1; Healoption.Heal =1;}
@@ -361,7 +362,6 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
 
   return 1;
 }
-
 
 //______________________________________________________________________________
 Int_t THealPainter::MakeCuts(char* choptin)
@@ -436,7 +436,7 @@ void THealPainter::Paint(Option_t* option)
   //
   // "XDIV" Draw the contents inverted along to X axis
   // "YDIV" Draw the contents inverted along to Y axis
-  printf("*****Paint*****\n");
+
   THealPix* oldheal = gCurrentHeal;
   gCurrentHeal = fHeal;
   THealPix* healsave = fHeal;
@@ -493,7 +493,6 @@ void THealPainter::Paint(Option_t* option)
 //______________________________________________________________________________
 void THealPainter::PaintAxis(Bool_t drawGridOnly)
 {
-  printf("*****PaintAxis*****\n");
   if(Healoption.Axis == -1){
     return;
   } // if
@@ -857,8 +856,6 @@ void THealPainter::PaintAxis(Bool_t drawGridOnly)
 //______________________________________________________________________________
 void THealPainter::PaintColorLevels(Option_t* option)
 {
-  printf("*****PaintColorLevels*****\n");
-
   Double_t zmin = fHeal->GetMinimum();
   Double_t zmax = fHeal->GetMaximum();
   if(Healoption.Logz){
@@ -912,127 +909,12 @@ void THealPainter::PaintColorLevels(Option_t* option)
       continue;
     } // if
 
-    Double_t theta, phi; // x/y center
-    fHeal->GetBinCenter(bin, theta, phi);
-    if(!fHeal->IsDegree()){
-      theta *= TMath::RadToDeg();
-      phi *= TMath::RadToDeg();
-    } // if
-    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
-      theta = 90 - theta;
-      phi -= 180;
-    } else if(Healoption.System == kCelestial){
-      theta = 90 - theta;
-    } // if
+    Int_t n;
+    Double_t x[5], y[5], xdiv[5], ydiv[5];
+    Bool_t used[5];
+    Bool_t divided = false;
 
-    if(!IsInside(phi, theta)){
-      continue;
-    } // if
-
-    Double_t x[5], y[5];
-    Int_t n = fHeal->GetBinVertices(bin, x, y);
-    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
-      if(x[0] >= 180. && x[1] >= 180. && x[2] >= 180. && x[3] >= 180. &&
-	 (n == 4 || (n == 5 && x[4] >= 180.))){
-	for(Int_t j = 0; j < n; j++){
-	  x[j] -= 360.;
-	} // j
-      } // if
-      for(Int_t j = 0; j < n; j++){
-	y[j] = 90. - y[j];
-      } // j
-    } else if(Healoption.System == kCelestial){
-      for(Int_t j = 0; j < n; j++){
-	y[j] = 90. - y[j];
-      } // j
-    } // if
-
-    if(Healoption.Proj == kHammer){
-      if(Healoption.System == kGalactic || Healoption.System == kLatLong){
-	for(Int_t j = 0; j < n; j++){
-	  Double_t lng = x[j]*TMath::DegToRad();
-	  Double_t lat = y[j]*TMath::DegToRad();
-	  x[j] = 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	  y[j] = 90.*TMath::Sin(lat)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	} // j
-      } else if(Healoption.System == kCelestial){
-	for(Int_t j = 0; j < n; j++){
-	  Double_t lng = (x[j] - 180.)*TMath::DegToRad();
-	  Double_t lat = y[j]*TMath::DegToRad();
-	  x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	  y[j] = 90.*TMath::Sin(lat)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	} // j
-      } else {
-	for(Int_t j = 0; j < n; j++){
-	  Double_t lng = (x[j] - 180.)*TMath::DegToRad();
-	  Double_t lat = (90. - y[j])*TMath::DegToRad();
-	  x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	  y[j] = 90. - 90.*TMath::Sin(lat)
-	    /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
-	} // j
-      } // if
-    } else if(Healoption.Proj == kLambert + 10){
-      for(Int_t j = 0; j < n; j++){
-	Double_t sint = TMath::Sin(y[j]*TMath::DegToRad());
-	Double_t z = TMath::Cos(y[j]*TMath::DegToRad());
-	Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
-	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
-	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
-	x[j] = X;
-	y[j] = Y;
-      } // j
-    } else if(Healoption.Proj == kLambert){
-      for(Int_t j = 0; j < n; j++){
-	Double_t y_ = (180. - y[j])*TMath::DegToRad();
-	Double_t sint = TMath::Sin(y_);
-	Double_t z = TMath::Cos(y_);
-	Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
-	Double_t X = tmp*TMath::Cos(x[j]*TMath::DegToRad());
-	Double_t Y = tmp*TMath::Sin(x[j]*TMath::DegToRad());
-	x[j] = X;
-	y[j] = Y;
-      } // j
-    } else if(Healoption.Proj == kPolar + 10){
-      for(Int_t j = 0; j < n; j++){
-	Double_t r = 180. - y[j];
-	Double_t phi = x[j]*TMath::DegToRad();
-	x[j] = r*TMath::Cos(phi);
-	y[j] = r*TMath::Sin(phi);
-      } // j
-    } else if(Healoption.Proj == kPolar){
-      for(Int_t j = 0; j < n; j++){
-	Double_t r = y[j];
-	Double_t phi = x[j]*TMath::DegToRad();
-	x[j] = r*TMath::Cos(phi);
-	y[j] = r*TMath::Sin(phi);
-      } // j
-    } // if
-
-    if(Healoption.Xinv == 1){
-      for(Int_t j = 0; j < n; j++){
-	x[j] = -x[j] + xmax + xmin;
-      } // j
-    } // if
-    if(Healoption.Yinv == 1){
-      for(Int_t j = 0; j < n; j++){
-	y[j] = -y[j] + ymax + ymin;
-      } // j
-    } // if
-
-    Bool_t isInsidePlotArea = kFALSE;
-    for(Int_t i = 0; i < n; i++){
-      if(xmin <= x[i] && x[i] <= xmax && ymin <= y[i] && y[i] <= ymax){
-	isInsidePlotArea |= kTRUE;
-	break;
-      } // if
-    } // i
-    if(!isInsidePlotArea){
-      // do not plot pixels outside the plot area
+    if(!Vertices(bin, n, x, y, xdiv, ydiv, used, divided, xmin, xmax, ymin, ymax)){
       continue;
     } // if
 
@@ -1056,9 +938,11 @@ void THealPainter::PaintColorLevels(Option_t* option)
     if(theColor > ncolors - 1){
       theColor = ncolors - 1;
     } // if
+ 
     fHeal->SetFillColor(gStyle->GetColorPalette(theColor));
     fHeal->TAttFill::Modify();
     gPad->PaintFillArea(n, x, y);
+    if(divided) gPad->PaintFillArea(n, xdiv, ydiv);
   } // bin
   
   if(Healoption.Zscale){
@@ -1071,15 +955,92 @@ void THealPainter::PaintColorLevels(Option_t* option)
 }
 
 //______________________________________________________________________________
+void THealPainter::PaintBoxes(Option_t* option)
+{
+  Double_t xmin = gPad->GetUxmin();
+  Double_t xmax = gPad->GetUxmax();
+  Double_t ymin = gPad->GetUymin();
+  Double_t ymax = gPad->GetUymax();
+  
+  Double_t zmin = fHeal->GetMinimum();
+  Double_t zmax = fHeal->GetMaximum();
+  
+  if(Healoption.Logz){
+    if(zmin > 0){
+      zmin = TMath::Log10(zmin*0.1);
+      zmax = TMath::Log10(zmax);
+    } else {
+      return;
+    } // if
+  } else {
+    zmax = TMath::Max(TMath::Abs(zmin), TMath::Abs(zmax));
+    zmin = 0;
+  } // if
+
+  // In case of option SAME, zmin and zmax values are taken from the
+  // first plotted 2D histogram.
+  if(Healoption.Same){
+    THealPix* heal;
+    TIter next(gPad->GetListOfPrimitives());
+    while((heal = (THealPix*)next())) {
+      if(!heal->InheritsFrom(THealPix::Class())) continue;
+      zmin = heal->GetMinimum();
+      zmax = heal->GetMaximum();
+      if(Healoption.Logz){
+	zmax = TMath::Log10(zmax);
+	if(zmin <= 0){
+	  zmin = TMath::Log10(zmax*0.001);
+	} else {
+	  zmin = TMath::Log10(zmin);
+	} // if
+      } // if
+      break;
+    } // while
+  } // if
+
+  Double_t zratio, dz = zmax - zmin;
+  
+  for(Int_t bin = 0; bin < fHeal->GetNpix(); bin++){
+    Double_t z = fHeal->GetBinContent(bin);
+    if(z == 0 && (zmin >= 0 || Healoption.Logz)){
+      continue; // don't draw the empty bins for histograms with positive content
+    } // if
+    if(Healoption.Logz){
+      z = z > 0 ? TMath::Log10(z) : zmin;
+    } // if
+    if(z < zmin){
+      continue;
+    } // if
+
+    Int_t n;
+    Double_t x[6], y[6], xdiv[6], ydiv[6];
+    Bool_t used[5];
+    Bool_t divided = false;
+
+    if(!Vertices(bin, n, x, y, xdiv, ydiv, used, divided, xmin, xmax, ymin, ymax)){
+      continue;
+    } // if
+    
+    x[n] = x[0];
+    y[n] = y[0];
+    gPad->PaintPolyLine(n + 1, x, y);
+    if(divided){
+      xdiv[n] = xdiv[0];
+      ydiv[n] = ydiv[0];
+      gPad->PaintPolyLine(n + 1, xdiv, ydiv);
+    } // if
+  } // bin
+}
+
+//______________________________________________________________________________
 void THealPainter::PaintContour(Option_t* option)
 {
-  printf("*****PaintContour*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintFrame()
 {
-  printf("*****PaintFrame*****\n");
   if(Healoption.Same){
     return;
   } // if
@@ -1119,13 +1080,12 @@ void THealPainter::PaintFunction(Option_t*)
 //______________________________________________________________________________
 void THealPainter::PaintLego(Option_t* option)
 {
-  printf("*****PaintLego*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintPalette()
 {
-  printf("*****PaintPalette*****\n");  
   THealPaletteAxis* palette = (THealPaletteAxis*)fFunctions->FindObject("palette");
   TView* view = gPad->GetView();
   if(palette){
@@ -1160,25 +1120,24 @@ void THealPainter::PaintPalette()
 //______________________________________________________________________________
 void THealPainter::PaintScatterPlot(Option_t* option)
 {
-  printf("*****PaintScatterPlot*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintStat(Int_t dostat, TF1* fit)
 {
-  printf("*****PaintStat*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintSurface(Option_t* option)
 {
-  printf("*****PaintSurface*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
 void THealPainter::PaintTable(Option_t* option)
 {
-  printf("*****PaintTable*****\n");
   if(!TableInit()){
     return;
   } // if
@@ -1186,9 +1145,10 @@ void THealPainter::PaintTable(Option_t* option)
   PaintFrame();
 
   if(fHeal->GetEntries() != 0 && Healoption.Axis <= 0){
-    if(Healoption.Scat)    PaintScatterPlot(option);
-    if(Healoption.Color)   PaintColorLevels(option);
-    if(Healoption.Contour) PaintContour(option);
+    if(Healoption.Scat)     PaintScatterPlot(option);
+    if(Healoption.Box)      PaintBoxes(option);
+    if(Healoption.Color)    PaintColorLevels(option);
+    if(Healoption.Contour)  PaintContour(option);
   } // if
 
   if(Healoption.Lego) PaintLego(option);
@@ -1218,7 +1178,6 @@ void THealPainter::PaintTable(Option_t* option)
 //______________________________________________________________________________
 void THealPainter::PaintTitle()
 {
-  printf("*****PaintTitle*****\n");
   if(Healoption.Same){
     return;
   } // if
@@ -1325,7 +1284,7 @@ void THealPainter::PaintTitle()
 //______________________________________________________________________________
 void THealPainter::PaintTriangles(Option_t* option)
 {
-  printf("*****PaintTriangles*****\n");  
+  // Not implemented yet
 }
 
 //______________________________________________________________________________
@@ -1383,8 +1342,6 @@ void THealPainter::SetHealPix(THealPix* heal)
 //______________________________________________________________________________
 Int_t THealPainter::TableInit()
 {
-  printf("*****TableInit*****\n");  
-
   static const char* where = "TableInit";
   
   Int_t first, last;
@@ -1525,4 +1482,169 @@ Int_t THealPainter::TableInit()
   Healparam.barwidth  = fHeal->GetBarWidth();
   
   return 1;
+}
+
+//______________________________________________________________________________
+Bool_t THealPainter::Vertices(Int_t bin, Int_t& n, Double_t* x, Double_t* y,
+			      Double_t* xdiv, Double_t* ydiv,
+			      Bool_t* used, Bool_t& divided,
+			      Double_t xmin, Double_t xmax,
+			      Double_t ymin, Double_t ymax)
+{
+  Double_t theta, phi; // x/y center
+  fHeal->GetBinCenter(bin, theta, phi);
+  if(!fHeal->IsDegree()){
+    theta *= TMath::RadToDeg();
+    phi *= TMath::RadToDeg();
+  } // if
+  if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+    theta = 90 - theta;
+    phi -= 180;
+  } else if(Healoption.System == kCelestial){
+    theta = 90 - theta;
+  } // if
+  
+  if(!IsInside(phi, theta)){
+    return false;
+  } // if
+
+  for(Int_t i = 0; i < 5; i++) used[i] = true;
+  n = fHeal->GetBinVertices(bin, x, y);
+  if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+    if(x[0] >= 180. && x[1] >= 180. && x[2] >= 180. && x[3] >= 180. &&
+       (n == 4 || (n == 5 && x[4] >= 180.))){
+      for(Int_t j = 0; j < n; j++){
+	x[j] -= 360.;
+      } // j
+    } // if
+    for(Int_t j = 0; j < n; j++){
+      y[j] = 90. - y[j];
+    } // j
+  } else if(Healoption.System == kCelestial){
+    for(Int_t j = 0; j < n; j++){
+      y[j] = 90. - y[j];
+    } // j
+  } // if
+  
+  if(Healoption.Proj == kHammer){
+    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+      for(Int_t j = 0; j < n; j++){
+	Double_t lng = x[j]*d2r;
+	Double_t lat = y[j]*d2r;
+	x[j] = 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	y[j] = 90.*TMath::Sin(lat)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	if(x[j] > 180*TMath::Cos(lat) || x[j] < -180*TMath::Cos(lat)) used[j] = false;
+      } // j
+    } else if(Healoption.System == kCelestial){
+      for(Int_t j = 0; j < n; j++){
+	Double_t lng = (x[j] - 180.)*d2r;
+	Double_t lat = y[j]*d2r;
+	x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	y[j] = 90.*TMath::Sin(lat)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	if(x[j] > 180. + 180*TMath::Cos(lat) || x[j] < 180. - 180*TMath::Cos(lat)) used[j] = false;
+      } // j
+    } else {
+      for(Int_t j = 0; j < n; j++){
+	Double_t lng = (x[j] - 180.)*d2r;
+	Double_t lat = (90. - y[j])*d2r;
+	x[j] = 180. + 180*TMath::Cos(lat)*TMath::Sin(lng/2.)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	y[j] = 90. - 90.*TMath::Sin(lat)
+	  /TMath::Sqrt(1. + TMath::Cos(lat)*TMath::Cos(lng/2.));
+	if(x[j] > 180. + 180*TMath::Cos(lat) || x[j] < 180. - 180*TMath::Cos(lat)) used[j] = false;
+      } // j
+    } // if
+  } else if(Healoption.Proj == kLambert + 10){
+    for(Int_t j = 0; j < n; j++){
+      Double_t sint = TMath::Sin(y[j]*d2r);
+      Double_t z = TMath::Cos(y[j]*d2r);
+      Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
+      x[j] = tmp*TMath::Cos(x[j]*d2r);
+      y[j] = tmp*TMath::Sin(x[j]*d2r);
+    } // j
+  } else if(Healoption.Proj == kLambert){
+    for(Int_t j = 0; j < n; j++){
+      Double_t y_ = (180. - y[j])*d2r;
+      Double_t sint = TMath::Sin(y_);
+      Double_t z = TMath::Cos(y_);
+      Double_t tmp = (z < 1) ? 180.*sint/TMath::Sqrt(2.*(1 - z)) : 180.;
+      x[j] = tmp*TMath::Cos(x[j]*d2r);
+      y[j] = tmp*TMath::Sin(x[j]*d2r);
+    } // j
+  } else if(Healoption.Proj == kPolar + 10){
+    for(Int_t j = 0; j < n; j++){
+      Double_t r = 180. - y[j];
+      Double_t phi = x[j]*d2r;
+      x[j] = r*TMath::Cos(phi);
+      y[j] = r*TMath::Sin(phi);
+    } // j
+  } else if(Healoption.Proj == kPolar){
+    for(Int_t j = 0; j < n; j++){
+      Double_t r = y[j];
+      Double_t phi = x[j]*d2r;
+      x[j] = r*TMath::Cos(phi);
+      y[j] = r*TMath::Sin(phi);
+    } // j
+  } else {
+    if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+      for(Int_t j = 0; j < n; j++){
+	if(x[j] > 180. || x[j] < -180.) used[j] = false;
+      } // j
+    } else if(Healoption.System == kCelestial){
+      for(Int_t j = 0; j < n; j++){
+	if(x[j] > 360. || x[j] < 0.) used[j] = false;
+      } // j
+    } else {
+      for(Int_t j = 0; j < n; j++){
+	if(x[j] > 360. || x[j] < 0.) used[j] = false;
+      } // j
+    } // if
+  } // if
+  
+  if(Healoption.Xinv == 1){
+    for(Int_t j = 0; j < n; j++){
+      x[j] = -x[j] + xmax + xmin;
+    } // j
+  } // if
+  if(Healoption.Yinv == 1){
+    for(Int_t j = 0; j < n; j++){
+      y[j] = -y[j] + ymax + ymin;
+    } // j
+  } // if
+  
+  Bool_t isInsidePlotArea = kFALSE;
+  for(Int_t i = 0; i < n; i++){
+    if(xmin <= x[i] && x[i] <= xmax && ymin <= y[i] && y[i] <= ymax){
+      isInsidePlotArea |= kTRUE;
+      break;
+    } // if
+  } // i
+  if(!isInsidePlotArea){
+    // do not plot pixels outside the plot area
+    return false;
+  } // if
+  
+  Int_t nSav = n;
+  for(Int_t i = 0; i < nSav; i++){
+    if(!used[i]){
+      divided = true;
+      for(Int_t j = i; j < nSav - 1; j++){
+	x[j] = x[j+1];
+	y[j] = y[j+1];
+      } // j
+      for(Int_t j = 0; j < nSav - 1; j++){
+	xdiv[j] = -1.*x[j];
+	ydiv[j] = y[j];
+	if(Healoption.System != kGalactic && Healoption.System != kLatLong) xdiv[j] += 360.;
+      } // j
+      n--;
+      break;
+    } // if
+  } // i
+
+  return true;
 }

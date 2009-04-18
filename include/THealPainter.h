@@ -1,4 +1,4 @@
-// $Id: THealPainter.h,v 1.4 2008/07/17 18:17:40 oxon Exp $
+// $Id: THealPainter.h,v 1.5 2009/04/18 05:52:35 oxon Exp $
 // Author: Akira Okumura 2008/07/07
 
 /*****************************************************************************
@@ -39,6 +39,12 @@ protected:
    Int_t          fCutsOpt[kMaxCuts]; //sign of each cut
    TCutG*         fCuts[kMaxCuts];    //Pointers to graphical cuts
 
+   virtual Bool_t Vertices(Int_t bin, Int_t& n, Double_t* x, Double_t* y,
+			   Double_t* xdiv, Double_t* ydiv,
+			   Bool_t* used, Bool_t& divided,
+			   Double_t xmin, Double_t xmax,
+			   Double_t ymin, Double_t ymax);
+
 public:
    enum {
      kThetaPhi,  // X:[180, 0] Y:[0, 360]
@@ -68,6 +74,7 @@ public:
    virtual void   Paint(Option_t* option = "");
    virtual void   PaintAxis(Bool_t drawGridOnly = kFALSE);
    virtual void   PaintColorLevels(Option_t* option);
+   virtual void   PaintBoxes(Option_t* option);
    virtual void   PaintContour(Option_t* option);
    virtual void   PaintFrame();
    virtual void   PaintFunction(Option_t* option);
