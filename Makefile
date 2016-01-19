@@ -6,7 +6,15 @@
 #  All rights reserved.                                                       #
 ###############################################################################
 
-include $(ROOTSYS)/test/Makefile.arch
+# older version
+MAKEARCH        :=      $(shell find -L $(ROOTSYS)/test -name Makefile.arch 2> /dev/null)
+
+ifeq ($(MAKEARCH), )
+# 41594 or later
+MAKEARCH        :=      $(shell find -L $(ROOTSYS)/etc -name Makefile.arch)
+endif
+
+include $(MAKEARCH)
 
 NAME	:=	RootHealPix
 DEPEND	:=	libGraf libHist libPhysics
