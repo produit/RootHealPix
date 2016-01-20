@@ -491,16 +491,18 @@ void THealPix::Map2Alm(THealAlm<T>& alm, const std::vector<double>& weight,
 	   std::complex<double> p1 = phas_n[ith][m]+phas_s[ith][m],
                                 p2 = phas_n[ith][m]-phas_s[ith][m];
           if ((l-m)&1) goto middle;
-start:    alm_tmp[l].real() += p1.real()*Ylm[l]; alm_tmp[l].imag() += p1.imag()*Ylm[l];
+start:
+          alm_tmp[l] += p1*Ylm[l];
           if (++l>lmax) goto end;
-middle:   alm_tmp[l].real() += p2.real()*Ylm[l]; alm_tmp[l].imag() += p2.imag()*Ylm[l];
+middle:
+          alm_tmp[l] += p2*Ylm[l];
           if (++l<=lmax) goto start;
 end:      ;
           }
         }
       std::complex<T> *palm = alm.GetMstart(m);
       for (int l=m; l<=lmax; ++l)
-        { palm[l].real() += alm_tmp[l].real(); palm[l].imag() += alm_tmp[l].imag(); }
+        { palm[l] += alm_tmp[l]; }
       }
     }
 

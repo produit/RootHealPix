@@ -45,7 +45,7 @@ public:
    Option_t*     GetName() const {return fName.Data();}
    virtual char* GetObjectInfo(Int_t px, Int_t py) const;
    virtual void  Paint(Option_t* option = "");
-   virtual void  SavePrimitive(ostream& out, Option_t* option = "");
+   virtual void  SavePrimitive(std::ostream& out, Option_t* option = "");
    virtual void  SetName(const char* name = "") {fName = name;} // *MENU*
    virtual void  SetLabelColor(Int_t labelcolor) {fAxis.SetLabelColor(labelcolor);} // *MENU*
    virtual void  SetLabelFont(Int_t labelfont) {fAxis.SetLabelFont(labelfont);} // *MENU*

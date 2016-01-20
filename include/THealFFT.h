@@ -104,9 +104,19 @@ class cfft
     void backward (double *data)
       { complex_plan_backward(plan,data); }
     void forward (std::vector<std::complex<double> >&data)
-      { forward(&(data[0].real())); }
+      {
+        double real = data[0].real();
+        data[0] -= real;
+        forward(&real);
+        data[0] += real;
+      }
     void backward (std::vector<std::complex<double> >&data)
-      { backward(&(data[0].real())); }
+      {
+        double real = data[0].real();
+        data[0] -= real;
+        backward(&real);
+        data[0] += real;
+      }
   };
 
 class rfft
@@ -133,9 +143,19 @@ class rfft
     void backward_fftpack (std::vector<double> &data)
       { backward_fftpack(&(data[0])); }
     void forward_c (std::vector<std::complex<double> >&data)
-      { real_plan_forward_c(plan,&(data[0].real())); }
+      {
+        double real = data[0].real();
+        data[0] -= real;
+        real_plan_forward_c(plan, &real);
+        data[0] += real;
+      }
     void backward_c (std::vector<std::complex<double> >&data)
-      { real_plan_backward_c(plan,&(data[0].real())); }
+      {
+        double real = data[0].real();
+        data[0] -= real;
+        real_plan_backward_c(plan, &real);
+        data[0] += real;
+      }
   };
 
 // from ylmgen.h of HEALPix C++

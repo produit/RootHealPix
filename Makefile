@@ -14,10 +14,21 @@ ifeq ($(MAKEARCH), )
 MAKEARCH        :=      $(shell find -L $(ROOTSYS)/etc -name Makefile.arch)
 endif
 
+ifeq ($(MAKEARCH), )
+RC := root-config
+MAKEARCH      :=      $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+endif
+
 include $(MAKEARCH)
 
+ifeq ($(ROOTCLING),)
+ROOTCLING       :=      $(ROOTCINT)
+else
+ROOTCLING_FOUND := 1
+endif
+
 NAME	:=	RootHealPix
-DEPEND	:=	libGraf libHist libPhysics
+DEPEND	:=	libCore libGraf libHist libPhysics
 
 SRCDIR	:=	src
 INCDIR	:=	include
@@ -30,17 +41,14 @@ DICTO	:=	$(SRCDIR)/$(NAME)Dict.$(ObjSuf)
 INCS	:=	$(filter-out $(INCDIR)/LinkDef.h,$(wildcard $(INCDIR)/*.h))
 SRCS	:=	$(filter-out $(SRCDIR)/$(DICT).%,$(wildcard $(SRCDIR)/*.$(SrcSuf)))
 OBJS	:=	$(patsubst %.$(SrcSuf),%.$(ObjSuf),$(SRCS)) $(DICTO)
+PCM     :=      $(NAME)Dict_rdict.pcm
 
 UNITTEST:=	$(wildcard unittest/*.py)
 
-ifeq ($(PLATFORM),macosx)
-LIB	=	lib$(NAME).$(DllSuf)
-LIB_SYMBOLIC=	$(subst .$(DllSuf),.so,$(LIB))
-endif
-ifeq ($(PLATFORM),win32)
-LIB	=	lib$(NAME).lib
-else
-LIB	=	lib$(NAME).$(DllSuf)
+LIB     =       lib$(NAME).$(DllSuf)
+
+ifneq ($(EXPLLINKLIBS), )
+EXPLLINKLIBS    += -lCore
 endif
 
 RMAP	=	lib$(NAME).rootmap
@@ -50,48 +58,71 @@ EXTLIBS	=	-lcfitsio
 .SUFFIXES:	.$(SrcSuf) .$(ObjSuf) .$(DllSuf)
 .PHONY:		all clean doc test
 
-all:		$(RMAP)
+ifeq ($(ROOTCLING_FOUND),)
+# ROOT 5
+all:            $(LIB) $(RMAP)
 
-$(LIB):		$(OBJS)
+$(RMAP):        $(LIB) $(INCDIR)/LinkDef.h
+                rlibmap -f -o $@ -l $(LIB) -d $(DEPEND) -c $(INCDIR)/LinkDef.h
+
+$(DICTS):       $(INCS) $(INCDIR)/LinkDef.h
+                @echo "Generating dictionary ..."
+                 $(ROOTCLING) -f $@ -c -p $^
+else
+# ROOT 6
+all:			$(LIB) $(PCM)
+
+$(SRCDIR)/$(PCM):       $(DICTS)
+
+$(DICTS):		$(INCS) $(INCDIR)/LinkDef.h
+				@echo "Generating dictionary ..."
+				$(ROOTCLING) -f $@ -c -p -I$(INCDIR) -rmf $(RMAP) -rml $(LIB) $^
+endif
+
+$(LIB):         $(OBJS) $(BOBJS)
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
-		$(LD) $(SOFLAGS) $(EXTLIBS) $^ $(OutPutOpt) $@
+				$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
 ifneq ($(subst $(MACOSX_MINOR),,1234),1234)
 ifeq ($(MACOSX_MINOR),4)
-		ln -sf $@ $(LIB_SYMBOLIC)
+                ln -sf $@ $(subst .$(DllSuf),.so,$@)
 else
-		$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $(EXTLIBS) $^ \
-		$(OutPutOpt) $(subst .$(DllSuf),.so,$@)
+ifneq ($(UNDEOPT), )
+                $(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \
+                   $(OutPutOpt) $(subst .$(DllSuf),.so,$@)
+endif
 endif
 endif
 else
 ifeq ($(PLATFORM),win32)
-		bindexplib $* $^ > $*.def
-		lib -nologo -MACHINE:IX86 $^ -def:$*.def $(OutPutOpt)$(EVENTLIB)
-                $(LD) $(EXTLIBS) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) $(OutPutOpt) $@
+                bindexplib $* $^ > $*.def
+                lib -nologo -MACHINE:IX86 $^ -def:$*.def \
+                   $(OutPutOpt)$(EVENTLIB)
+                $(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \
+                   $(OutPutOpt)$@
+                $(MT_DLL)
 else
-		$(LD) $(EXTLIBS) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
+                $(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
 endif
 endif
-		@echo "$@ done"
+				@echo "$@ done"
 
+$(SRCDIR)/%.$(ObjSuf):  $(SRCDIR)/%.$(SrcSuf) $(INCDIR)/%.h
+				@echo "Compiling" $<
+				$(CXX) $(CXXFLAGS) -Wall -g -I$(INCDIR) -c $< -o $@
 
-$(SRCDIR)/%.$(ObjSuf):	$(SRCDIR)/%.$(SrcSuf) $(INCDIR)/%.h
-		@echo "Compiling" $<
-		$(CXX) $(CXXFLAGS) -I$(INCDIR) -c $< -o $@
+$(SRCDIR)/%.$(ObjSuf):  $(SRCDIR)/%.c
+				@echo "Compiling" $<
+				$(CC) $(CCFLAGS) -I$(BINCDIR) -fPIC -c $< -o $@
 
-$(DICTS):	$(INCS) $(INCDIR)/LinkDef.h
-		@echo "Generating dictionary ..."
-		rootcint -f $@ -c -p $^
+$(PCM):         $(SRCDIR)/$(PCM)
+				cp $^ $@
 
-$(DICTO):	$(DICTS)
-		@echo "Compiling" $<
-		$(CXX) $(CXXFLAGS) -I. -I/usr/X11/include -c $< -o $@
+$(DICTO):       $(DICTS)
+				@echo "Compiling" $<
+				$(CXX) $(CXXFLAGS) -I. -c $< -o $@
 
-$(RMAP):	$(LIB) $(INCDIR)/LinkDef.h
-		rlibmap -f -o $@ -l $(LIB) -d $(DEPEND) -c $(INCDIR)/LinkDef.h
-
-doc:	all htmldoc
+doc:    all htmldoc
 
 htmldoc:
 	sh mkhtml.sh

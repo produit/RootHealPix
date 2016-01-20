@@ -191,9 +191,11 @@ void THealAlm<T>::Alm2Map(THealPix& map) const
 	  std::complex<double> p1(0, 0), p2(0, 0);
 	  
           if ((l-m)&1) goto middle;
-	start:    p1.real() += alm_tmp[l].real()*Ylm[l]; p1.imag() += alm_tmp[l].imag()*Ylm[l];
+	start:
+          p1 += alm_tmp[l]*Ylm[l];
           if (++l>fLmax) goto end;
-	middle:   p2.real() += alm_tmp[l].real()*Ylm[l]; p2.imag() += alm_tmp[l].imag()*Ylm[l];
+	middle:
+          p2 += alm_tmp[l]*Ylm[l];
           if (++l<=fLmax) goto start;
 	end:      b_north[ith][m] = p1+p2; b_south[ith][m] = p1-p2;
 	}
