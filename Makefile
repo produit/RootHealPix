@@ -7,24 +7,24 @@
 ###############################################################################
 
 # older version
-MAKEARCH        :=      $(shell find -L $(ROOTSYS)/test -name Makefile.arch 2> /dev/null)
+MAKEARCH	:=	$(shell find -L $(ROOTSYS)/test -name Makefile.arch 2> /dev/null)
 
 ifeq ($(MAKEARCH), )
 # 41594 or later
-MAKEARCH        :=      $(shell find -L $(ROOTSYS)/etc -name Makefile.arch)
+MAKEARCH	:=	$(shell find -L $(ROOTSYS)/etc -name Makefile.arch)
 endif
 
 ifeq ($(MAKEARCH), )
 RC := root-config
-MAKEARCH      :=      $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+MAKEARCH	:=	$(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
 endif
 
 include $(MAKEARCH)
 
 ifeq ($(ROOTCLING),)
-ROOTCLING       :=      $(ROOTCINT)
+ROOTCLING	:=	$(ROOTCINT)
 else
-ROOTCLING_FOUND := 1
+ROOTCLING_FOUND	:=	1
 endif
 
 NAME	:=	RootHealPix
@@ -41,14 +41,14 @@ DICTO	:=	$(SRCDIR)/$(NAME)Dict.$(ObjSuf)
 INCS	:=	$(filter-out $(INCDIR)/LinkDef.h,$(wildcard $(INCDIR)/*.h))
 SRCS	:=	$(filter-out $(SRCDIR)/$(DICT).%,$(wildcard $(SRCDIR)/*.$(SrcSuf)))
 OBJS	:=	$(patsubst %.$(SrcSuf),%.$(ObjSuf),$(SRCS)) $(DICTO)
-PCM     :=      $(NAME)Dict_rdict.pcm
+PCM	:=	$(NAME)Dict_rdict.pcm
 
 UNITTEST:=	$(wildcard unittest/*.py)
 
-LIB     =       lib$(NAME).$(DllSuf)
+LIB	=	lib$(NAME).$(DllSuf)
 
 ifneq ($(EXPLLINKLIBS), )
-EXPLLINKLIBS    += -lCore
+EXPLLINKLIBS	+=	-lCore
 endif
 
 RMAP	=	lib$(NAME).rootmap
@@ -60,67 +60,67 @@ EXTLIBS	=	-lcfitsio
 
 ifeq ($(ROOTCLING_FOUND),)
 # ROOT 5
-all:            $(LIB) $(RMAP)
+all:	$(LIB) $(RMAP)
 
-$(RMAP):        $(LIB) $(INCDIR)/LinkDef.h
-                rlibmap -f -o $@ -l $(LIB) -d $(DEPEND) -c $(INCDIR)/LinkDef.h
+$(RMAP):	$(LIB) $(INCDIR)/LinkDef.h
+		rlibmap -f -o $@ -l $(LIB) -d $(DEPEND) -c $(INCDIR)/LinkDef.h
 
-$(DICTS):       $(INCS) $(INCDIR)/LinkDef.h
-                @echo "Generating dictionary ..."
-                 $(ROOTCLING) -f $@ -c -p $^
+$(DICTS):	$(INCS) $(INCDIR)/LinkDef.h
+		@echo "Generating dictionary ..."
+		$(ROOTCLING) -f $@ -c -p $^
 else
 # ROOT 6
-all:			$(LIB) $(PCM)
+all:		$(LIB) $(PCM)
 
-$(SRCDIR)/$(PCM):       $(DICTS)
+$(SRCDIR)/$(PCM):	$(DICTS)
 
-$(DICTS):		$(INCS) $(INCDIR)/LinkDef.h
-				@echo "Generating dictionary ..."
-				$(ROOTCLING) -f $@ -c -p -I$(INCDIR) -rmf $(RMAP) -rml $(LIB) $^
+$(DICTS):	$(INCS) $(INCDIR)/LinkDef.h
+		@echo "Generating dictionary ..."
+		$(ROOTCLING) -f $@ -c -p -I$(INCDIR) -rmf $(RMAP) -rml $(LIB) $^
 endif
 
-$(LIB):         $(OBJS) $(BOBJS)
+$(LIB):		$(OBJS) $(BOBJS)
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
-				$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
+	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
 ifneq ($(subst $(MACOSX_MINOR),,1234),1234)
 ifeq ($(MACOSX_MINOR),4)
-                ln -sf $@ $(subst .$(DllSuf),.so,$@)
+	ln -sf $@ $(subst .$(DllSuf),.so,$@)
 else
 ifneq ($(UNDEOPT), )
-                $(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \
-                   $(OutPutOpt) $(subst .$(DllSuf),.so,$@)
+	$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \
+	$(OutPutOpt) $(subst .$(DllSuf),.so,$@)
 endif
 endif
 endif
 else
 ifeq ($(PLATFORM),win32)
-                bindexplib $* $^ > $*.def
-                lib -nologo -MACHINE:IX86 $^ -def:$*.def \
-                   $(OutPutOpt)$(EVENTLIB)
-                $(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \
-                   $(OutPutOpt)$@
-                $(MT_DLL)
+	bindexplib $* $^ > $*.def
+	lib -nologo -MACHINE:IX86 $^ -def:$*.def \
+	$(OutPutOpt)$(EVENTLIB)
+	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \
+	$(OutPutOpt)$@
+	$(MT_DLL)
 else
-                $(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
+	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS) $(EXTLIBS)
 endif
 endif
-				@echo "$@ done"
+	@echo "$@ done"
 
 $(SRCDIR)/%.$(ObjSuf):  $(SRCDIR)/%.$(SrcSuf) $(INCDIR)/%.h
-				@echo "Compiling" $<
-				$(CXX) $(CXXFLAGS) -Wall -g -I$(INCDIR) -c $< -o $@
+	@echo "Compiling" $<
+	$(CXX) $(CXXFLAGS) -Wall -g -I$(INCDIR) -c $< -o $@
 
 $(SRCDIR)/%.$(ObjSuf):  $(SRCDIR)/%.c
-				@echo "Compiling" $<
-				$(CC) $(CCFLAGS) -I$(BINCDIR) -fPIC -c $< -o $@
+	@echo "Compiling" $<
+	$(CC) $(CCFLAGS) -I$(BINCDIR) -fPIC -c $< -o $@
 
 $(PCM):         $(SRCDIR)/$(PCM)
-				cp $^ $@
+	cp $^ $@
 
 $(DICTO):       $(DICTS)
-				@echo "Compiling" $<
-				$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+	@echo "Compiling" $<
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
 
 doc:    all htmldoc
 
@@ -135,4 +135,4 @@ test:	all
 	done
 
 clean:
-		rm -rf $(LIB) $(LIB_SYMBOLIC) $(OBJS) $(DICTI) $(DICTS) $(DICTO) htmldoc
+	rm -rf $(LIB) $(LIB_SYMBOLIC) $(OBJS) $(DICTI) $(DICTS) $(DICTO) htmldoc
