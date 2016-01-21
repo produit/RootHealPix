@@ -23,7 +23,7 @@
 class TAxis;
 class TCutG;
 class THealPix;
-const Int_t kMaxCuts = 16;
+const Int_t kMaxCuts2 = 16;
 
 class THealPainter : public TVirtualHealPainter {
 
@@ -36,8 +36,8 @@ protected:
    Double_t*      fXbuf;              //X buffer coordinates
    Double_t*      fYbuf;              //Y buffer coordinates
    Int_t          fNcuts;             //Number of graphical cuts
-   Int_t          fCutsOpt[kMaxCuts]; //sign of each cut
-   TCutG*         fCuts[kMaxCuts];    //Pointers to graphical cuts
+   Int_t          fCutsOpt[kMaxCuts2];//sign of each cut
+   TCutG*         fCuts[kMaxCuts2];    //Pointers to graphical cuts
 
    virtual Bool_t Vertices(Int_t bin, Int_t& n, Double_t* x, Double_t* y,
 			   Double_t* xdiv, Double_t* ydiv,
