@@ -104,8 +104,8 @@ class TestHealAlm(unittest.TestCase):
                     rhs = complex(l*l, m*m)/complex(l, m)
                 else:
                     rhs = complex(0, 0)
-                self.assertEqual(alm(l, m).real(), rhs.real)
-                self.assertEqual(alm(l, m).imag(), rhs.imag)
+                self.assertAlmostEqual(alm(l, m).real(), rhs.real)
+                self.assertAlmostEqual(alm(l, m).imag(), rhs.imag)
 
         alm = 3.*alm1
         for l in range(lmax + 1):
