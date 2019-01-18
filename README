@@ -19,8 +19,10 @@ $ make test
 === Run in ROOT ===
 $ export LD_LIBRARY_PATH=YOUR_ROOTHEALPIX_PATH:$LD_LIBRARY_PATH
 $ root
-root [0] gSystem->Load("libRootHealPix")
-root [1] .x YourMacro.C
+root [0] gSystem->Load("libGraf")
+root [1] gSystem->Load("libPhysics")
+root [2] gSystem->Load("libRootHealPix")
+root [3] .x YourMacro.C
 
 === Run in Python ===
 $ export PYTHONPATH=YOUR_ROOTHEALPIX_PATH:$PYTHONPATH

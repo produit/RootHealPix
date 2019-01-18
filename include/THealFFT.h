@@ -178,7 +178,7 @@ class Ylmgen
 
       int m2 = m*m;
       double f_old=1;
-      for (int l=m; l<recfac.size()/2; ++l)
+      for (std::size_t l=m; l<recfac.size()/2; ++l)
         {
         int l2 = (l+1)*(l+1);
         recfac[2*l]   = sqrt(double(4*l2 - 1) / (l2-m2));
@@ -201,13 +201,13 @@ class Ylmgen
 
       fsmall = ldexp(1.,-large_exponent2);
       fbig   = ldexp(1., large_exponent2);
-      for (int m=0; m<cf.size(); ++m)
+      for (std::size_t m=0; m<cf.size(); ++m)
         cf[m] = ldexp(1.,(m+minscale)*large_exponent2);
 
       mfac[0] = 1;
-      for (int m=1; m<mfac.size(); ++m)
+      for (std::size_t m=1; m<mfac.size(); ++m)
         mfac[m] = mfac[m-1]*sqrt((2*m+1.)/(2*m));
-      for (int m=0; m<mfac.size(); ++m)
+      for (std::size_t m=0; m<mfac.size(); ++m)
         mfac[m] = (1/TMath::Log(2))*log((1/TMath::Sqrt(4*TMath::Pi()))*mfac[m]);
       }
 

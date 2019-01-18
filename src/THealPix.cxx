@@ -1188,7 +1188,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
     } // if
     if(order == 14){
       fits_close_file(*fptr, &status);
-      std::cerr << Form("Invalid Nside %d was given.\n", nside);
+      std::cerr << Form("Invalid Nside %ld was given.\n", nside);
       return kFALSE;
     } // if
   } // i
@@ -1197,7 +1197,7 @@ Bool_t THealPix::ReadFitsHeader(fitsfile** fptr, const char* fname,
 
   if(!(nrows*repeat == npix || nrows == npix || repeat >= 1)){
     fits_close_file(*fptr, &status);
-    std::cerr << Form("Incompatible type of header (Npix = %d, Nrows = %d, Repeat = %d).\n", npix, nrows, repeat);
+    std::cerr << Form("Incompatible type of header (Npix = %d, Nrows = %ld, Repeat = %ld).\n", npix, nrows, repeat);
     return kFALSE;
   } // if
 

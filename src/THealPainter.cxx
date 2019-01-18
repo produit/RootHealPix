@@ -26,6 +26,7 @@
 #include "TStyle.h"
 #include "TText.h"
 #include "TVirtualPadEditor.h"
+#include "TView.h"
 
 #include "THealPix.h"
 #include "THealPainter.h"
@@ -72,7 +73,8 @@ void THealPainter::DrawPanel()
   } // if
   TVirtualPadEditor* editor = TVirtualPadEditor::GetPadEditor();
   editor->Show();
-  gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx, (TObject*)0x%lx, 1)", gPad->GetCanvas(), gPad, fHeal));
+  gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx, (TObject*)0x%lx, 1)",(long unsigned int) gPad->GetCanvas(),
+			  (long unsigned int)gPad,(long unsigned int) fHeal));
 }
 
 //______________________________________________________________________________
@@ -998,7 +1000,6 @@ void THealPainter::PaintBoxes(Option_t* option)
     } // while
   } // if
 
-  Double_t zratio, dz = zmax - zmin;
   
   for(Int_t bin = 0; bin < fHeal->GetNpix(); bin++){
     Double_t z = fHeal->GetBinContent(bin);
@@ -1304,7 +1305,6 @@ void THealPainter::RecalculateRange()
   Double_t ymin = Healparam.ymin;
   Double_t ymax = Healparam.ymax;
 
-  Double_t xmin_aid, ymin_aid, xmax_aid, ymax_aid;
   if(Healoption.Proj == 1){
   } else if(Healoption.Proj == 2){
   } else if(Healoption.Proj == 3){

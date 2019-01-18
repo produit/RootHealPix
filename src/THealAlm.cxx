@@ -10,6 +10,7 @@
 ******************************************************************************/
 
 #include "TMath.h"
+#include "TBuffer.h"
 
 #include "THealAlm.h"
 #include "THealPix.h"
@@ -185,7 +186,7 @@ void THealAlm<T>::Alm2Map(THealPix& map) const
       } // l
       
       for(int ith=0; ith<ulim-llim; ++ith){
-        int l;
+        int l=0;
         generator.get_Ylm(cth[ith],sth[ith],m,Ylm,l);
         if(l<=fLmax){
 	  std::complex<double> p1(0, 0), p2(0, 0);
