@@ -271,6 +271,12 @@ Int_t THealPainter::MakeChopt(Option_t* choptin)
     Healoption.Proj = kPolar;
     strncpy(l, "     ", 5);
   } // if
+  l = strstr(chopt, "MOLLWEIDE");
+  if(l){
+    if(nch == 9) Healoption.Heal = 1;
+    Healoption.Proj = kMollweide;
+    strncpy(l, "         ", 9);
+  } // if
 
   // Inversed plot option
   l = strstr(chopt, "XINV");
@@ -430,6 +436,7 @@ void THealPainter::Paint(Option_t* option)
   // "LAMBERT2" User Lambert-azimuthal projection viewed from the nadir.
   // "LAMBERT"  Same as "LAMBERT1"
   // "HAMMER" Use Hammer-Aitoff projecton.
+  // "MOLLWEIDE" Use Mollweide projecton.
   //
   // "THETAPHI"  The range of X/Y axes are set to (0, 360)/(0, 180) (default)
   // "GALACTIC"  The range of X/Y axes are set to (-180, 180)/(-90, 90)
@@ -452,6 +459,9 @@ void THealPainter::Paint(Option_t* option)
   if(Healoption.Proj%10 == kLambert || Healoption.Proj%10 == kPolar){
     fXaxis->Set(1, -180., 180.);
     fYaxis->Set(1, -180., 180.);
+  } else if (Healoption.Proj%10 == kMollweide){
+    fXaxis->Set(1, -2.*TMath::Sqrt(2.), 2.*TMath::Sqrt(2.) );
+    fYaxis->Set(1, -TMath::Sqrt(2.), TMath::Sqrt(2.));    
   } else {
     if(Healoption.System == kThetaPhi){
       fXaxis->Set(1, 0., 360.);
@@ -1484,6 +1494,20 @@ Int_t THealPainter::TableInit()
   return 1;
 }
 
+double solveMoll(double phi){
+  double tp=phi;
+  int i;
+  double dp;
+  for (i=0;i<20;i++){
+    dp=-(tp+TMath::Sin(tp)-TMath::Pi()*TMath::Sin(phi))/(1+TMath::Cos(tp));
+    tp+=dp;
+    if (abs(dp)<1E-4){
+      break;
+    }
+  }
+  return tp;
+}
+
 //______________________________________________________________________________
 Bool_t THealPainter::Vertices(Int_t bin, Int_t& n, Double_t* x, Double_t* y,
 			      Double_t* xdiv, Double_t* ydiv,
@@ -1588,6 +1612,26 @@ Bool_t THealPainter::Vertices(Int_t bin, Int_t& n, Double_t* x, Double_t* y,
       Double_t phi = x[j]*d2r;
       x[j] = r*TMath::Cos(phi);
       y[j] = r*TMath::Sin(phi);
+    } // j
+  } else if(Healoption.Proj == kMollweide){
+    for(Int_t j = 0; j < n; j++){
+      Double_t lng;
+      Double_t lat;
+      if(Healoption.System == kGalactic || Healoption.System == kLatLong){
+	lng = x[j]*d2r;
+	lat = y[j]*d2r;
+      }else if(Healoption.System == kCelestial){
+	lng = (x[j]- 180.)*d2r;
+	lat = y[j]*d2r;
+      }else{
+	lng = (x[j] - 180.)*d2r;
+	lat = (90. - y[j])*d2r;
+      }
+      Double_t thetap=solveMoll(lat);
+      theta=thetap/2.;
+      x[j] = 2*TMath::Sqrt(2)/TMath::Pi()*lng*TMath::Cos(theta);
+      y[j] = TMath::Sqrt(2)*TMath::Sin(theta);
+      if (x[j]*x[j]/8.+y[j]*y[j]/2.>1) used[j] = false;
     } // j
   } else {
     if(Healoption.System == kGalactic || Healoption.System == kLatLong){

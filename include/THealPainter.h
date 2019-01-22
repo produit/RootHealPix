@@ -58,7 +58,8 @@ public:
      kAitoff,  // Aitoff projection
      kHammer,  // Hammer projection
      kLambert, // Lambert azimuthal equal-area projection
-     kPolar    // Polar projection.
+     kPolar,    // Polar projection
+     kMollweide // Mollweide projection.
    };
 
    THealPainter();

@@ -1803,7 +1803,8 @@ void rffti(int n, double wsave[])
 // from bluestein.c of HEALPix C++
 namespace {
 /* returns the largest prime factor of n */
-int largest_prime_factor (int n)
+/*
+  int largest_prime_factor (int n)
   {
   int maxdiv=0,x,limit,tmp;
   while (((tmp=(n>>1))<<1)==n)
@@ -1821,7 +1822,8 @@ int largest_prime_factor (int n)
 
   return maxdiv;
   }
-
+*/
+  
 /* returns the sum of all prime factors of n */
 int prime_factor_sum (int n)
   {
@@ -1843,6 +1845,7 @@ int prime_factor_sum (int n)
   }
 
 /* returns the smallest power of 2 which is >= n */
+/*
 int nextpow2 (int n)
   {
   int cnt=1;
@@ -1850,7 +1853,8 @@ int nextpow2 (int n)
     ++cnt;
   return 1<<cnt;
   }
-
+*/
+  
 /* returns the smallest composite of 2, 3 and 5 which is >= n */
 int good_size(int n)
   {
@@ -2084,6 +2088,7 @@ void THealFFT::real_plan_forward_fftpack (real_plan plan, double *data)
     rfftf (plan->length, data, plan->work);
   }
 
+/*
 namespace {
 void fftpack2halfcomplex (double *data, int n)
   {
@@ -2123,6 +2128,7 @@ void real_plan_forward_fftw (real_plan plan, double *data)
   fftpack2halfcomplex (data,plan->length);
   }
 }
+*/
 
 void THealFFT::real_plan_backward_fftpack (real_plan plan, double *data)
   {
@@ -2149,13 +2155,15 @@ void THealFFT::real_plan_backward_fftpack (real_plan plan, double *data)
     rfftb (plan->length, data, plan->work);
   }
 
+/*
 namespace {
-void real_plan_backward_fftw (real_plan plan, double *data)
+  void real_plan_backward_fftw (real_plan plan, double *data)
   {
   halfcomplex2fftpack (data,plan->length);
   real_plan_backward_fftpack (plan, data);
   }
 }
+*/
 
 void THealFFT::real_plan_forward_c (real_plan plan, double *data)
   {

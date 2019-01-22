@@ -256,8 +256,10 @@ namespace {
 		    std::vector<std::complex<double> > &work);
   void recalc_map2alm (int nph, int mmax, THealFFT::rfft &plan,
 		       std::vector<std::complex<double> > &shiftarr);
+  /*
   void recalc_alm2map (int nph, int mmax, THealFFT::rfft &plan,
 		       std::vector<std::complex<double> > &shiftarr);
+  */
   template<typename T>
   void fft_alm2map (int nph, int mmax, bool shifted, THealFFT::rfft &plan,
 		    T *mapN, T *mapS, std::complex<double> *b_north,
